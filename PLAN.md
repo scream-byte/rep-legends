@@ -171,3 +171,4 @@ cosmetics(id, kind, price_stars) ; inventory(user_id, cosmetic_id) ; purchases(i
 
 ## Журнал этапов
 - 2026-11-14: план одобрен, созданы PLAN.md и GUIDE.md.
+- 2026-11-14: этап 0 (в работе). Node v26.13.1 установлен. Создан каркас: npm workspaces (`apps/web`), React 19.3 + Vite 8.3 + TS 7.0, `tg.ts`, i18n ru/en (автоопределение + переключатель), временная комикс-заглушка, workflow GitHub Pages (`.github/workflows/deploy-web.yml`, base `/rep-legends/`). `npm run build` проходит. Git: локальный репозиторий, ветка `main`, автор `silindanniil-byte` (noreply email). Осталось: пользователь создаёт репозиторий `rep-legends` + Pages Source = GitHub Actions → `git push` → BotFather Mini App URL `https://silindanniil-byte.github.io/rep-legends/` → проверка на iPhone и Android.
