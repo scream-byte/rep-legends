@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
 import { detectLang, getDict, type Lang } from './i18n';
 import { getPlatform, getTgVersion, getUser, haptic, insideTelegram } from './telegram/tg';
+import { Backdrop } from './ui/Backdrop';
 import { Hero } from './ui/Hero';
 import {
   BoltIcon,
+  ChevronsIcon,
   DumbbellIcon,
   FriendsIcon,
   GearIcon,
   HeartIcon,
   HelmetIcon,
+  HexBadge,
   HomeIcon,
+  MapIcon,
   ScrollIcon,
   ShieldIcon,
-  SwordsIcon,
+  TicketIcon,
   TrophyIcon,
+  Wing,
 } from './ui/icons';
 
 // Placeholder hero progress until real data arrives in stage 4.
@@ -32,8 +37,8 @@ export function App() {
     return () => clearTimeout(id);
   }, [toast]);
 
-  function soon() {
-    haptic('light');
+  function soon(style: 'light' | 'heavy' = 'light') {
+    haptic(style);
     setToast(t.comingSoon);
   }
 
@@ -46,7 +51,7 @@ export function App() {
 
   const nav = [
     { key: 'hero', icon: <HelmetIcon size={34} />, label: t.nav.hero },
-    { key: 'arenas', icon: <SwordsIcon size={34} />, label: t.nav.arenas },
+    { key: 'arenas', icon: <TicketIcon size={34} />, label: t.nav.arenas },
     { key: 'home', icon: <HomeIcon size={34} />, label: t.nav.home, active: true },
     { key: 'tasks', icon: <ScrollIcon size={34} />, label: t.nav.tasks },
     { key: 'ranking', icon: <TrophyIcon size={34} />, label: t.nav.ranking },
@@ -54,40 +59,47 @@ export function App() {
 
   return (
     <div className="app">
-      <div className="rays" aria-hidden />
+      <Backdrop />
 
-      {/* Top bar: level + XP, rank */}
+      {/* Top bar: power level + XP, rank with wings */}
       <header className="topbar">
         <div className="level">
-          <div className="level-badge outlined">{HERO.level}</div>
-          <div className="xp-bar">
-            <div className="xp-fill" style={{ width: `${Math.max(HERO.xpPercent, 4)}%` }} />
-            <span className="outlined">{HERO.xpPercent}%</span>
+          <HexBadge text={HERO.level} size={54} />
+          <div className="level-right">
+            <span className="level-label outlined">{t.powerLevel}</span>
+            <div className="xp-bar">
+              <div className="xp-fill" style={{ width: `${HERO.xpPercent}%` }} />
+              <span className="outlined">{HERO.xpPercent}%</span>
+            </div>
           </div>
         </div>
-        <div className="rank-pill">
-          <span>{t.rank}</span>
-          <b className="outlined">{HERO.rank}</b>
+        <div className="rank">
+          <Wing />
+          <div className="rank-pill">
+            <span className="outlined">{t.rank}</span>
+            <HexBadge text={HERO.rank} size={30} />
+          </div>
+          <Wing flip />
         </div>
       </header>
 
       {/* Hero stats */}
       <section className="stats">
         {stats.map((s) => (
-          <div key={s.key} className="stat">
+          <div key={s.key} className={`stat stat-${s.key}`}>
             <div className="stat-top">
               {s.icon}
               <b className="outlined">{s.value}</b>
             </div>
-            <small>{s.label}</small>
+            <small className="outlined">{s.label}</small>
           </div>
         ))}
       </section>
 
-      {/* Stage: side buttons around the greeting, hero fills the rest */}
+      {/* Stage: glowing side buttons around the greeting, hero fills the rest */}
       <section className="stage">
-        <button className="side-btn" onClick={soon}>
-          <FriendsIcon size={40} />
+        <button className="side-btn" onClick={() => soon()}>
+          <FriendsIcon size={44} />
           <span className="outlined">{t.friends}</span>
         </button>
         <div className="bubble">
@@ -95,7 +107,7 @@ export function App() {
           <span>{t.readyLine}</span>
         </div>
         <button className="side-btn" onClick={() => setSettingsOpen(true)}>
-          <GearIcon size={40} />
+          <GearIcon size={44} />
           <span className="outlined">{t.settings}</span>
         </button>
 
@@ -108,17 +120,12 @@ export function App() {
 
       {/* Main actions */}
       <section className="actions">
-        <button
-          className="btn3d play"
-          onClick={() => {
-            haptic('heavy');
-            setToast(t.comingSoon);
-          }}
-        >
-          {t.play}
+        <button className="play" onClick={() => soon('heavy')}>
+          <span className="outlined">{t.play}</span>
+          <ChevronsIcon size={30} />
         </button>
-        <button className="btn3d tile" onClick={soon}>
-          <SwordsIcon size={44} />
+        <button className="tile" onClick={() => soon()}>
+          <MapIcon size={50} />
           <span className="outlined">{t.arenas}</span>
         </button>
       </section>
@@ -126,7 +133,7 @@ export function App() {
       {/* Bottom navigation */}
       <nav className="bottom-nav">
         {nav.map((n) => (
-          <button key={n.key} className={n.active ? 'active' : ''} onClick={n.active ? undefined : soon}>
+          <button key={n.key} className={n.active ? 'active' : ''} onClick={n.active ? undefined : () => soon()}>
             {n.icon}
             <span className="outlined">{n.label}</span>
           </button>
@@ -158,7 +165,7 @@ export function App() {
                 </li>
               </ul>
             </details>
-            <button className="btn3d close" onClick={() => setSettingsOpen(false)}>
+            <button className="close" onClick={() => setSettingsOpen(false)}>
               {t.close}
             </button>
           </div>

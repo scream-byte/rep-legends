@@ -2,6 +2,7 @@ export const ru = {
   hello: (name: string) => `Привет, ${name}!`,
   guest: 'Герой',
   readyLine: 'Готов к первой тренировке?',
+  powerLevel: 'Уровень силы',
   play: 'В бой!',
   arenas: 'Арены',
   comingSoon: 'Скоро!',
@@ -9,7 +10,7 @@ export const ru = {
   stats: {
     attack: 'Атака',
     strength: 'Сила',
-    endurance: 'Выносл.',
+    endurance: 'Выносливость',
     defense: 'Защита',
   },
   friends: 'Друзья',

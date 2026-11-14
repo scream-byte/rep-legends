@@ -4,6 +4,7 @@ export const en: typeof ru = {
   hello: (name: string) => `Hi, ${name}!`,
   guest: 'Hero',
   readyLine: 'Ready for your first workout?',
+  powerLevel: 'Power Level',
   play: 'Fight!',
   arenas: 'Arenas',
   comingSoon: 'Soon!',
@@ -11,7 +12,7 @@ export const en: typeof ru = {
   stats: {
     attack: 'Attack',
     strength: 'Strength',
-    endurance: 'Stamina',
+    endurance: 'Endurance',
     defense: 'Defense',
   },
   friends: 'Friends',
