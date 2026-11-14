@@ -9,10 +9,10 @@ export const ru = {
   stats: {
     attack: 'Атака',
     strength: 'Сила',
-    endurance: 'Вынос.',
+    endurance: 'Выносл.',
     defense: 'Защита',
   },
-  ranking: 'Рейтинг',
+  friends: 'Друзья',
   settings: 'Настройки',
   nav: {
     hero: 'Герой',

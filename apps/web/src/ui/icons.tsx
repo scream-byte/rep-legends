@@ -23,6 +23,15 @@ export const TrophyIcon = (p: P) => (
   </Svg>
 );
 
+export const FriendsIcon = (p: P) => (
+  <Svg {...p}>
+    <circle cx="32" cy="15" r="7" fill="#5cc8ff" />
+    <path d="M20 40 q0 -14 12 -14 q12 0 12 14 z" fill="#5cc8ff" />
+    <circle cx="17" cy="17" r="8" fill="#ff8a1f" />
+    <path d="M3 42 q0 -16 14 -16 q14 0 14 16 z" fill="#ff8a1f" />
+  </Svg>
+);
+
 export const GearIcon = (p: P) => (
   <Svg {...p}>
     <path

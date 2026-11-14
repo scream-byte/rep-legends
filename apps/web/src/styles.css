@@ -22,9 +22,11 @@
 }
 
 html,
-body {
+body,
+#root {
   margin: 0;
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
   background: var(--blue-2);
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
@@ -49,14 +51,16 @@ button {
   text-shadow: 0 2px 0 var(--ink);
 }
 
+/* The whole screen is exactly one viewport tall and never scrolls.
+   Telegram sets --tg-viewport-stable-height; elsewhere we fall back to 100dvh. */
 .app {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: var(--tg-viewport-stable-height, 100dvh);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: calc(12px + env(safe-area-inset-top, 0px)) 14px calc(96px + env(safe-area-inset-bottom, 0px));
+  gap: 10px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
   overflow: hidden;
   background: radial-gradient(120% 70% at 50% 45%, var(--blue-1) 0%, var(--blue-2) 55%, var(--blue-3) 100%);
 }
@@ -77,6 +81,16 @@ button {
 
 .app > * {
   position: relative;
+  flex-shrink: 0;
+}
+
+/* side gutter for everything except the edge-to-edge bottom nav */
+.topbar,
+.stats,
+.stage,
+.actions,
+.warn {
+  margin-inline: 12px;
 }
 
 /* ---------- top bar ---------- */
@@ -163,54 +177,62 @@ button {
 
 .stat {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 5px 6px;
+  padding: 3px 2px 4px;
   background: rgba(34, 41, 107, 0.85);
   border: 3px solid var(--ink);
   border-radius: 12px;
-  color: var(--white);
   min-width: 0;
 }
 
-.stat svg {
-  flex-shrink: 0;
-}
-
-.stat div {
+.stat-top {
   display: flex;
-  flex-direction: column;
-  line-height: 1.05;
-  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-top b {
+  font-size: 19px;
 }
 
 .stat small {
+  max-width: 100%;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1.1;
   color: #b9c8ff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.stat b {
-  font-size: 17px;
-}
-
 /* ---------- stage with hero ---------- */
+/* Row 1: [side button] [greeting] [side button]; row 2: hero takes all leftover height */
 .stage {
-  flex: 1;
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding-top: 70px;
+  flex: 1 1 auto !important;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto 1fr;
+  column-gap: 8px;
+  align-items: start;
 }
 
+.hero-box {
+  grid-column: 1 / -1;
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  margin-top: 10px;
+}
+
+/* The SVG scales down to whatever space is left, keeping its proportions */
 .hero {
-  width: min(88vw, 380px);
-  height: auto;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   animation: bob 2.4s ease-in-out infinite;
   transform-origin: 50% 100%;
 }
@@ -226,21 +248,23 @@ button {
 }
 
 .bubble {
+  align-self: end;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 62%;
-  margin-bottom: 4px;
-  padding: 8px 14px;
+  min-width: 0;
+  padding: 6px 10px;
   background: var(--white);
   border: 3px solid var(--ink);
   border-radius: 18px;
   box-shadow: 0 4px 0 var(--ink);
   text-align: center;
   position: relative;
+  z-index: 1; /* own stacking layer so the tail sits under the text */
 }
 
 .bubble::after {
+  z-index: -1;
   content: '';
   position: absolute;
   bottom: -12px;
@@ -254,18 +278,21 @@ button {
 }
 
 .bubble b {
-  font-size: 18px;
+  font-size: 16px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bubble span {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  line-height: 1.2;
 }
 
 .side-btn {
-  position: absolute;
-  top: 0;
-  width: 82px;
+  width: 76px;
   padding: 6px 2px 4px;
   display: flex;
   flex-direction: column;
@@ -286,14 +313,6 @@ button {
 .side-btn:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--ink);
-}
-
-.side-btn.left {
-  left: 0;
-}
-
-.side-btn.right {
-  right: 0;
 }
 
 /* ---------- main actions ---------- */
@@ -323,7 +342,7 @@ button {
 
 .play {
   flex: 1;
-  min-height: 92px;
+  min-height: 84px;
   font-size: clamp(34px, 11vw, 46px);
   font-weight: 900;
   color: var(--ink);
@@ -357,10 +376,7 @@ button {
 
 /* ---------- bottom navigation ---------- */
 .bottom-nav {
-  position: fixed !important;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  margin-top: 4px;
   z-index: 5;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -429,6 +445,35 @@ button {
   100% {
     transform: translate(-50%, -60%) scale(1) rotate(-4deg);
     opacity: 0;
+  }
+}
+
+/* ---------- short windows (Telegram Desktop, small phones) ---------- */
+@media (max-height: 680px) {
+  .app {
+    gap: 8px;
+  }
+  .play {
+    min-height: 66px;
+    font-size: 34px;
+  }
+  .tile {
+    width: 88px;
+  }
+  .tile svg {
+    width: 34px;
+    height: 34px;
+  }
+  .side-btn svg {
+    width: 32px;
+    height: 32px;
+  }
+  .bottom-nav button {
+    padding: 5px 0 4px;
+  }
+  .bottom-nav svg {
+    width: 28px;
+    height: 28px;
   }
 }
 

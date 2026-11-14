@@ -14,7 +14,7 @@ export const en: typeof ru = {
     endurance: 'Stamina',
     defense: 'Defense',
   },
-  ranking: 'Ranking',
+  friends: 'Friends',
   settings: 'Settings',
   nav: {
     hero: 'Hero',

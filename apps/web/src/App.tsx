@@ -5,6 +5,7 @@ import { Hero } from './ui/Hero';
 import {
   BoltIcon,
   DumbbellIcon,
+  FriendsIcon,
   GearIcon,
   HeartIcon,
   HelmetIcon,
@@ -74,31 +75,33 @@ export function App() {
       <section className="stats">
         {stats.map((s) => (
           <div key={s.key} className="stat">
-            {s.icon}
-            <div>
-              <small>{s.label}</small>
-              <b>{s.value}</b>
+            <div className="stat-top">
+              {s.icon}
+              <b className="outlined">{s.value}</b>
             </div>
+            <small>{s.label}</small>
           </div>
         ))}
       </section>
 
-      {/* Stage: side buttons + hero */}
+      {/* Stage: side buttons around the greeting, hero fills the rest */}
       <section className="stage">
-        <button className="side-btn left" onClick={soon}>
-          <TrophyIcon size={44} />
-          <span className="outlined">{t.ranking}</span>
+        <button className="side-btn" onClick={soon}>
+          <FriendsIcon size={40} />
+          <span className="outlined">{t.friends}</span>
         </button>
-        <button className="side-btn right" onClick={() => setSettingsOpen(true)}>
-          <GearIcon size={44} />
-          <span className="outlined">{t.settings}</span>
-        </button>
-
         <div className="bubble">
           <b>{t.hello(name)}</b>
           <span>{t.readyLine}</span>
         </div>
-        <Hero className="hero" />
+        <button className="side-btn" onClick={() => setSettingsOpen(true)}>
+          <GearIcon size={40} />
+          <span className="outlined">{t.settings}</span>
+        </button>
+
+        <div className="hero-box">
+          <Hero className="hero" />
+        </div>
       </section>
 
       {!insideTelegram && <p className="warn">{t.notInTelegram}</p>}
