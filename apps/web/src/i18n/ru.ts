@@ -6,6 +6,7 @@ export const ru = {
   arenas: 'Арены',
   comingSoon: 'Скоро!',
   rank: 'Ранг',
+  levelShort: 'УР.',
   stats: {
     attack: 'Атака',
     strength: 'Сила',

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { detectLang, getDict, type Lang } from './i18n';
 import { getPlatform, getTgVersion, getUser, haptic, insideTelegram } from './telegram/tg';
 import { Hero } from './ui/Hero';
+import { LevelBadge } from './ui/LevelBadge';
 import {
   BoltIcon,
   DumbbellIcon,
@@ -59,7 +60,7 @@ export function App() {
       {/* Top bar: level + XP, rank */}
       <header className="topbar">
         <div className="level">
-          <div className="level-badge outlined">{HERO.level}</div>
+          <LevelBadge level={HERO.level} label={t.levelShort} />
           <div className="xp-bar">
             <div className="xp-fill" style={{ width: `${Math.max(HERO.xpPercent, 4)}%` }} />
             <span className="outlined">{HERO.xpPercent}%</span>

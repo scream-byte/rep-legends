@@ -8,6 +8,7 @@ export const en: typeof ru = {
   arenas: 'Arenas',
   comingSoon: 'Soon!',
   rank: 'Rank',
+  levelShort: 'LVL',
   stats: {
     attack: 'Attack',
     strength: 'Strength',

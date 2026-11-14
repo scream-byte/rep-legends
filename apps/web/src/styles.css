@@ -109,16 +109,10 @@ button {
 }
 
 .level-badge {
+  position: relative;
   z-index: 1;
-  width: 48px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  font-size: 28px;
-  background: linear-gradient(#5cc8ff, #2a7bff);
-  border: 3px solid var(--ink);
-  clip-path: polygon(50% 0, 100% 18%, 100% 70%, 50% 100%, 0 70%, 0 18%);
-  border-radius: 6px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 3px 0 var(--ink));
 }
 
 .xp-bar {
