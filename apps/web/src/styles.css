@@ -1,0 +1,150 @@
+/* Placeholder comic style for stage 0. Full visual polish comes in stage 7. */
+:root {
+  --ink: #111;
+  --paper: #fff7e0;
+  --hot: #ff2e4d;
+  --sun: #ffd400;
+  --sky: #1fb6ff;
+  --outline: 4px solid var(--ink);
+  font-family: 'Arial Black', 'Segoe UI', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--sky);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.screen {
+  position: relative;
+  min-height: 100vh;
+  padding: 24px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--sky) 0 55%, var(--sun) 55% 100%);
+}
+
+/* Comic halftone dots */
+.halftone {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.18) 1.5px, transparent 1.6px);
+  background-size: 10px 10px;
+  pointer-events: none;
+}
+
+.title-panel {
+  position: relative;
+  transform: rotate(-3deg);
+  background: var(--hot);
+  border: var(--outline);
+  box-shadow: 8px 8px 0 var(--ink);
+  padding: 16px 24px;
+  text-align: center;
+}
+
+.logo {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 0.9;
+  font-size: clamp(44px, 14vw, 72px);
+  color: var(--sun);
+  -webkit-text-stroke: 3px var(--ink);
+  text-shadow: 4px 4px 0 var(--ink);
+  letter-spacing: 1px;
+}
+
+.tagline {
+  margin: 8px 0 0;
+  color: #fff;
+  font-size: 15px;
+  text-transform: uppercase;
+}
+
+.speech {
+  position: relative;
+  background: #fff;
+  border: var(--outline);
+  border-radius: 24px;
+  padding: 16px 20px;
+  max-width: 420px;
+  width: 100%;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-weight: 600;
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.speech p {
+  margin: 0;
+}
+
+.hello {
+  font-family: 'Arial Black', system-ui, sans-serif;
+  font-size: 24px;
+  margin-bottom: 8px !important;
+}
+
+.cta {
+  position: relative;
+  font: inherit;
+  font-size: 32px;
+  text-transform: uppercase;
+  padding: 14px 40px;
+  background: var(--hot);
+  color: #fff;
+  border: var(--outline);
+  box-shadow: 6px 6px 0 var(--ink);
+  transform: skew(-8deg);
+  cursor: pointer;
+}
+
+.cta:active {
+  transform: skew(-8deg) translate(4px, 4px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.lang {
+  position: relative;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 16px;
+  background: #fff;
+  border: 3px solid var(--ink);
+  cursor: pointer;
+}
+
+.warn {
+  position: relative;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  padding: 6px 10px;
+}
+
+.info {
+  position: relative;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--ink);
+  padding: 6px 12px;
+}
+
+.info ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
