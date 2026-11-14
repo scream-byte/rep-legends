@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { Dict, Lang } from '../i18n';
-import { getPlatform, getTgVersion, getUser, haptic, insideTelegram } from '../telegram/tg';
+import { sfx } from '../audio/sfx';
+import type { Dict } from '../i18n';
+import type { Settings } from '../settings';
+import { getUser, haptic, insideTelegram } from '../telegram/tg';
+import { SettingsModal } from '../ui/SettingsModal';
 import { Hero } from '../ui/Hero';
 import { LevelBadge } from '../ui/LevelBadge';
 import {
@@ -22,12 +25,13 @@ const HERO = { level: 1, xpPercent: 0, rank: 'E', attack: 1, strength: 1, endura
 
 interface Props {
   t: Dict;
-  lang: Lang;
-  setLang: (l: Lang) => void;
+  settings: Settings;
+  update: (patch: Partial<Settings>) => void;
+  reset: () => void;
   onPlay: () => void;
 }
 
-export function Home({ t, lang, setLang, onPlay }: Props) {
+export function Home({ t, settings, update, reset, onPlay }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const name = getUser()?.first_name ?? t.guest;
@@ -39,8 +43,14 @@ export function Home({ t, lang, setLang, onPlay }: Props) {
   }, [toast]);
 
   function soon() {
+    sfx.click();
     haptic('light');
     setToast(t.comingSoon);
+  }
+
+  function openSettings() {
+    sfx.click();
+    setSettingsOpen(true);
   }
 
   const stats = [
@@ -100,7 +110,7 @@ export function Home({ t, lang, setLang, onPlay }: Props) {
           <b>{t.hello(name)}</b>
           <span>{t.readyLine}</span>
         </div>
-        <button className="side-btn" onClick={() => setSettingsOpen(true)}>
+        <button className="side-btn" onClick={openSettings}>
           <GearIcon size={40} />
           <span className="outlined">{t.settings}</span>
         </button>
@@ -117,6 +127,7 @@ export function Home({ t, lang, setLang, onPlay }: Props) {
         <button
           className="btn3d play"
           onClick={() => {
+            sfx.go();
             haptic('heavy');
             onPlay();
           }}
@@ -142,33 +153,7 @@ export function Home({ t, lang, setLang, onPlay }: Props) {
       {toast && <div className="toast outlined">{toast}</div>}
 
       {settingsOpen && (
-        <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="outlined">{t.settings}</h2>
-            <p className="modal-label">{t.language}</p>
-            <div className="segmented">
-              {(['ru', 'en'] as const).map((l) => (
-                <button key={l} className={lang === l ? 'on' : ''} onClick={() => setLang(l)}>
-                  {l === 'ru' ? 'Русский' : 'English'}
-                </button>
-              ))}
-            </div>
-            <details className="info">
-              <summary>{t.info}</summary>
-              <ul>
-                <li>
-                  {t.platform}: {getPlatform()}
-                </li>
-                <li>
-                  {t.version}: {getTgVersion()}
-                </li>
-              </ul>
-            </details>
-            <button className="btn3d close" onClick={() => setSettingsOpen(false)}>
-              {t.close}
-            </button>
-          </div>
-        </div>
+        <SettingsModal t={t} settings={settings} update={update} reset={reset} onClose={() => setSettingsOpen(false)} />
       )}
     </div>
   );

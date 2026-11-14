@@ -1,5 +1,6 @@
 import { PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { sfx } from '../audio/sfx';
 import {
   calibrationHint,
   measurePushup,
@@ -131,13 +132,16 @@ export function Pushups({ t, onExit }: Props) {
     let n = COUNTDOWN_FROM;
     setCountdown(n);
     haptic('light');
+    sfx.countdown();
     const id = window.setInterval(() => {
       n -= 1;
       if (n > 0) {
         setCountdown(n);
         haptic('light');
+        sfx.countdown();
         return;
       }
+      sfx.go();
       clearInterval(id);
       counterRef.current = new PushupCounter();
       setReps(0);
@@ -180,9 +184,11 @@ export function Pushups({ t, onExit }: Props) {
     if (u.counted) {
       setReps(counterRef.current.reps);
       haptic('medium');
+      sfx.rep();
     } else if (u.hint && !isLost) {
       setHint({ key: u.hint, id: now });
       hapticNotify('warning');
+      sfx.warn();
     }
   }
 
@@ -348,6 +354,7 @@ export function Pushups({ t, onExit }: Props) {
     setResult({ reps: count, ms, best: Math.max(prev, count), newBest });
     setPhase('result');
     hapticNotify('success');
+    sfx.finish();
   }
 
   // ---------- render ----------

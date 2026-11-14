@@ -22,4 +22,5 @@ export function save(key: string, value: string): void {
 export const keys = {
   warmupAck: 'warmupAck',
   bestPushups: 'best.pushup',
+  settings: 'settings',
 } as const;

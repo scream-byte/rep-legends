@@ -64,8 +64,13 @@ export function getTgVersion(): string {
   return webApp?.version ?? '—';
 }
 
-// Haptics exist since Bot API 6.1; skip them in a plain browser or older clients.
-const canVibrate = () => insideTelegram && webApp!.isVersionAtLeast('6.1');
+// Haptics exist since Bot API 6.1; skip them in a plain browser or older clients,
+// and when the player switched vibration off in Settings.
+let hapticsEnabled = true;
+export function setHapticsEnabled(on: boolean): void {
+  hapticsEnabled = on;
+}
+const canVibrate = () => hapticsEnabled && insideTelegram && webApp!.isVersionAtLeast('6.1');
 
 export function haptic(style: 'light' | 'medium' | 'heavy' = 'medium'): void {
   if (canVibrate()) webApp?.HapticFeedback?.impactOccurred(style);
