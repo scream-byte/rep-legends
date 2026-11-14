@@ -22,6 +22,13 @@ interface TgWebApp {
   disableVerticalSwipes?: () => void;
   HapticFeedback?: {
     impactOccurred(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'): void;
+    notificationOccurred(type: 'error' | 'success' | 'warning'): void;
+  };
+  BackButton?: {
+    show(): void;
+    hide(): void;
+    onClick(cb: () => void): void;
+    offClick(cb: () => void): void;
   };
 }
 
@@ -57,6 +64,28 @@ export function getTgVersion(): string {
   return webApp?.version ?? '—';
 }
 
+// Haptics exist since Bot API 6.1; skip them in a plain browser or older clients.
+const canVibrate = () => insideTelegram && webApp!.isVersionAtLeast('6.1');
+
 export function haptic(style: 'light' | 'medium' | 'heavy' = 'medium'): void {
-  webApp?.HapticFeedback?.impactOccurred(style);
+  if (canVibrate()) webApp?.HapticFeedback?.impactOccurred(style);
+}
+
+export function hapticNotify(type: 'error' | 'success' | 'warning'): void {
+  if (canVibrate()) webApp?.HapticFeedback?.notificationOccurred(type);
+}
+
+/**
+ * Shows Telegram's native "back" arrow in the header while a screen is open.
+ * Returns a cleanup function that hides it again.
+ */
+export function showBackButton(onBack: () => void): () => void {
+  const bb = webApp?.BackButton;
+  if (!bb || !webApp!.isVersionAtLeast('6.1')) return () => {};
+  bb.onClick(onBack);
+  bb.show();
+  return () => {
+    bb.offClick(onBack);
+    bb.hide();
+  };
 }

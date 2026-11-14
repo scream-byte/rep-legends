@@ -3,8 +3,8 @@
 > Документ для агента-разработчика. Обновляется после каждого этапа.
 > Инструкция для человека — в [GUIDE.md](GUIDE.md).
 
-**Текущий статус:** план одобрен, этап 0 не начат.
-**Окружение (проверено 2026-11-14):** Windows 11, Git 2.56 установлен, Node.js **не установлен**.
+**Текущий статус:** этап 0 ✅ принят. Этап 1 (счётчик отжиманий) реализован и выложен — ждёт проверки пользователем на iPhone и Android.
+**Окружение (проверено 2026-11-14):** Windows 11, Git 2.56, Node v26.13.1 / npm 11.20. Сайт: https://silindanniil-byte.github.io/rep-legends/ (GitHub Pages, деплой по push в `main`). Push из сессии агента работает (GCM сохранил вход).
 
 ## 0. Решения, принятые с пользователем
 - Название: **Rep Legends**.
@@ -97,7 +97,7 @@ project/
 
 | Упражнение | Ракурс | Метрика | DOWN | UP | Форма | minRepMs |
 |---|---|---|---|---|---|---|
-| pushup | сбоку, телефон на полу | угол локтя | < 90° | > 155° | плечо–таз–лодыжка > 150° | 600 |
+| pushup | сбоку, телефон на полу | угол локтя | < 90° | > 155° | плечо–таз–лодыжка > 150°, корпус горизонтален (dx > 1.3·dy) | 400 (от момента, когда руки перестали быть прямыми) |
 | squat | сбоку/спереди | угол колена | < 100° | > 160° | — | 700 |
 | situp | сбоку | угол корпуса к полу | < 20° (лёжа) | > 70° | колени согнуты | 800 |
 | pullup | спереди снизу | нос выше линии кистей / угол локтя | локоть > 150° (вис) | нос выше кистей | — | 900 |
@@ -172,4 +172,12 @@ cosmetics(id, kind, price_stars) ; inventory(user_id, cosmetic_id) ; purchases(i
 
 ## Журнал этапов
 - 2026-11-14: план одобрен, созданы PLAN.md и GUIDE.md.
+- 2026-11-14: **этап 1 реализован** (ждёт проверки на телефонах).
+  - `@mediapipe/tasks-vision` **1.2.3** (exact). API как в 0.10.x: `FilesetResolver.forVisionTasks(base)`, `PoseLandmarker.createFromOptions`, `detectForVideo(video, ts)`. В пакете только `vision_wasm_internal.{js,wasm}` (14 МБ, без nosimd).
+  - `apps/web/scripts/copy-mediapipe.mjs` (predev/prebuild) копирует wasm в `public/mediapipe/wasm/` (в .gitignore); модель `public/mediapipe/pose_landmarker_lite.task` (5,6 МБ) лежит в репозитории.
+  - `pose/landmarker.ts` (GPU → CPU fallback, в т.ч. при ошибке во время работы), `pose/camera.ts` (getUserMedia 640×480, wake lock), `pose/geometry.ts`.
+  - `exercises/pushup.ts`: `measurePushup` (выбор стороны по visibility, углы в пикселях), `calibrationHint`, `PushupCounter` (EMA α=0.4, гистерезис 90/155, подсказки lower/back/fast/plank/lost, журнал `RepRecord` для сервера на этапе 2).
+  - `exercises/pushup.test.ts` — 16 синтетических тестов (`npm test`), все проходят. Тест нашёл баг: длительность считалась от 140°, а не от начала спуска → честные быстрые отжимания отбраковывались; исправлено (`lastTopAt`, minRepMs 400).
+  - Экраны: `screens/Home.tsx` (вынесен из App), `Warmup.tsx` (разминка/врач, один раз, `localStorage rl.warmupAck`), `Pushups.tsx` (setup → loading → calibrating (1 с в позе) → 3-2-1 → active → result; рекорд в `rl.best.pushup`; Telegram BackButton; отладка: скелет + FPS/делегат/углы).
+  - Smoke-тест в Edge с виртуальной камерой (CDP): калибровка достигнута за 5 с, GPU, ~75 FPS на ПК, без исключений. Реальный подсчёт на человеке и камера в Telegram iOS/Android — проверяет пользователь.
 - 2026-11-14: этап 0 (в работе). Node v26.13.1 установлен. Создан каркас: npm workspaces (`apps/web`), React 19.3 + Vite 8.3 + TS 7.0, `tg.ts`, i18n ru/en (автоопределение + переключатель), временная комикс-заглушка, workflow GitHub Pages (`.github/workflows/deploy-web.yml`, base `/rep-legends/`). `npm run build` проходит. Git: локальный репозиторий, ветка `main`, автор `silindanniil-byte` (noreply email). Обновление: репозиторий создан, push выполнен пользователем (GCM), Actions success, сайт отдаёт 200. Затем по просьбе пользователя главный экран переделан в мультяшный стиль: topbar (уровень/XP, ранг), 4 характеристики, боковые кнопки «Рейтинг»/«Настройки» (модалка с выбором языка), маскот с репликой, «В бой!» + «Арены», нижнее меню; неготовые разделы показывают всплывающее «Скоро!». Осталось (исходный список): пользователь создаёт репозиторий `rep-legends` + Pages Source = GitHub Actions → `git push` → BotFather Mini App URL `https://silindanniil-byte.github.io/rep-legends/` → проверка на iPhone и Android.
