@@ -1,6 +1,6 @@
 // Synthetic tests for the pull-up counter: fake elbow-angle + chin sequences
 // for good, half, too-fast and partial-bottom reps. Run with: npm test
-import { measurePullup, pullupCalibrationHint, PullupCounter, type PullupFrame } from './pullup.ts';
+import { measurePullup, pullupCalibrationHint, PullupCounter, pullupExercise, type PullupFrame } from './pullup.ts';
 
 const FPS = 30;
 const CHIN_TOL = 0.12;
@@ -114,7 +114,25 @@ check('BACK view, top → at the bar', bt.visible && bt.hanging && (bt.barScore 
 const nf = measurePullup(body({ face: 0.1, legs: 0.0, ...deadHang }), 480, 640);
 check('feet/legs out of frame → still ready', nf.visible && pullupCalibrationHint(nf) === 'hold', `${nf.debug} → ${pullupCalibrationHint(nf)}`);
 
+// Real-phone case (2026-11-15): from behind, at the top the elbows/wrists got low
+// visibility — the frame was rejected and the rep was lost. Now the average is used.
+const lowVisTop = body({ face: 0.1, legs: 0.0, ...top }).map((p, i) => ([13, 14, 15, 16].includes(i) ? { ...p, visibility: 0.25 } : p));
+const lt = measurePullup(lowVisTop, 480, 640);
+check('BACK view top, elbows/wrists low visibility → still trusted & at bar', lt.visible && lt.hanging && (lt.barScore ?? -1) >= 0, lt.debug);
+
+// Auto-finish must only trigger when confidently off the bar, never on a doubtful frame.
+check('auto-finish: doubtful frame does not end the set', pullupExercise.inPosition!({ ...lt, visible: false }) === true, 'visible=false → inPosition=true');
+
 const standing = measurePullup(body({ face: 0.95, legs: 0.9, shY: 0.5, elY: 0.65, elX: 0.12 }).map((p, i) => (i === 15 || i === 16 ? { ...p, y: 0.8 } : p)), 480, 640);
 check('standing with arms down → not hanging', !standing.hanging && pullupCalibrationHint(standing) === 'notHanging', standing.debug);
+check('auto-finish: confidently off the bar ends the set', pullupExercise.inPosition!(standing) === false, 'arms down, visible → inPosition=false');
+
+// The phone's exact sequence: hang at 157° → pull to 65° with bar +0.33 → lower → hang again.
+const real = [
+  ...ramp(600, [157, -1.3], [157, -1.3]),
+  ...ramp(900, [157, -1.3], [65, 0.33 - CHIN_TOL]),
+  ...ramp(900, [61, 0.23 - CHIN_TOL], [157, -1.3]),
+];
+run('real phone sequence (hang 157°, top 65° / bar +0.33)', real, 1);
 
 if (failed) process.exitCode = 1;

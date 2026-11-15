@@ -18,8 +18,8 @@ import { angle, toPx, type Pt } from '../pose/geometry.ts';
 import type { BaseFrame, Counter, ExerciseDef, Landmark, RepRecord, RepUpdate } from './types.ts';
 
 export const PULLUP_RULES = {
-  /** elbow angle above this = arms straight (bottom / dead hang) */
-  straightArms: 150,
+  /** elbow angle above this = arms straight (bottom / dead hang). Real hangs measured ~157°. */
+  straightArms: 145,
   /** elbow angle below this = a real pull attempt started */
   pullStarted: 125,
   /** front view: chin may be this far below the wrist line and still count */
@@ -33,8 +33,10 @@ export const PULLUP_RULES = {
   leftBarScore: -0.3,
   /** the pulling phase alone (leaving the dead hang → chin over bar) can't be faster than this */
   minRepMs: 300,
-  /** MediaPipe visibility needed for shoulders, elbows and wrists */
-  minVisibility: 0.5,
+  /** AVERAGE MediaPipe visibility of shoulders, elbows and wrists needed to trust the frame.
+   *  Low on purpose ("trust mode"): from behind, bent arms at the bar get low visibility
+   *  even though the points are placed correctly (seen on a real phone: top of rep went red). */
+  minVisibility: 0.3,
   /** face (nose + mouth) counts as visible above this — otherwise we assume a back view */
   faceVisibility: 0.6,
   /** smoothing for the elbow angle (0..1, higher = less smoothing) */
@@ -85,7 +87,9 @@ export function measurePullup(lms: Landmark[] | undefined, width: number, height
   const v = (i: number) => lms[i].visibility ?? 0;
 
   // Only arms + shoulders are required. Head and legs are optional.
-  const armsVis = Math.min(...[I.lSh, I.rSh, I.lEl, I.rEl, I.lWr, I.rWr].map(v));
+  // Average (not minimum): one doubtful elbow shouldn't throw away the whole frame.
+  const armPts = [I.lSh, I.rSh, I.lEl, I.rEl, I.lWr, I.rWr];
+  const armsVis = armPts.reduce((s, i) => s + v(i), 0) / armPts.length;
   const faceVisible = Math.min(v(I.nose), v(I.mouthL), v(I.mouthR)) >= R.faceVisibility;
 
   const [lSh, rSh, lEl, rEl, lWr, rWr] = [I.lSh, I.rSh, I.lEl, I.rEl, I.lWr, I.rWr].map(P);
@@ -214,7 +218,9 @@ export const pullupExercise: ExerciseDef<PullupFrame> = {
   holdMs: 600,
   // Hanging is tiring: start the moment the athlete hangs still, no 3-2-1.
   countdown: 0,
-  // Hands free on the bar → the set ends by itself after jumping off.
-  inPosition: (f) => f.visible && f.hanging,
+  // Hands are busy on the bar → the set ends by itself after jumping off.
+  // Only a CONFIDENT "arms below the bar" counts as off the bar; a frame the
+  // camera isn't sure about (e.g. bent arms seen from behind) never ends the set.
+  inPosition: (f) => !f.visible || f.hanging,
   autoFinishMs: 3000,
 };
