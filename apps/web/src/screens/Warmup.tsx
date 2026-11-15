@@ -3,6 +3,7 @@ import type { Dict } from '../i18n';
 import { keys, save } from '../storage';
 import { haptic, showBackButton } from '../telegram/tg';
 import { HeartIcon } from '../ui/icons';
+import { MenuBackdrop } from '../ui/MenuBackdrop';
 
 interface Props {
   t: Dict;
@@ -22,7 +23,7 @@ export function Warmup({ t, onAccept, onBack }: Props) {
 
   return (
     <div className="app panel-screen">
-      <div className="rays" aria-hidden />
+      <MenuBackdrop />
       <div className="panel">
         <div className="panel-icon">
           <HeartIcon size={56} />

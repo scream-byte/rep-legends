@@ -65,14 +65,6 @@ button {
   background: radial-gradient(120% 70% at 50% 45%, var(--blue-1) 0%, var(--blue-2) 55%, var(--blue-3) 100%);
 }
 
-.rays {
-  position: absolute;
-  inset: -50%;
-  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.07) 0 10deg, transparent 10deg 20deg);
-  pointer-events: none;
-  animation: spin 60s linear infinite;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -82,6 +74,78 @@ button {
 .app > * {
   position: relative;
   flex-shrink: 0;
+}
+
+/* ---------- menu background (ui/MenuBackdrop.tsx) ---------- */
+.app > .menu-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* SVG parts rotate/scale around points in the drawing, not the page */
+.menu-backdrop g,
+.menu-backdrop path {
+  transform-box: view-box;
+}
+
+.mb-rays {
+  transform-origin: 200px 330px;
+  animation: spin 150s linear infinite;
+}
+
+.mb-cloud {
+  animation: drift 38s ease-in-out infinite alternate;
+}
+
+.mb-cloud.slow {
+  animation-duration: 55s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes drift {
+  from {
+    transform: translateX(-18px);
+  }
+  to {
+    transform: translateX(18px);
+  }
+}
+
+.mb-float {
+  animation: float-soft 6s ease-in-out infinite;
+}
+
+.mb-float.slow {
+  animation-duration: 8s;
+  animation-delay: -3s;
+}
+
+@keyframes float-soft {
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
+
+.mb-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0.15;
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
 }
 
 /* side gutter for everything except the edge-to-edge bottom nav */
@@ -258,6 +322,31 @@ button {
   min-height: 0;
   height: 100%;
   margin-top: 10px;
+}
+
+/* Glowing "spotlight" podium the hero stands on */
+.hero-box::before,
+.hero-box::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-box::before {
+  width: min(78%, 320px);
+  height: 46px;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.55), rgba(190, 230, 255, 0.25) 60%, transparent);
+}
+
+.hero-box::after {
+  width: min(56%, 230px);
+  height: 22px;
+  bottom: 10px;
+  border: 3px solid rgba(255, 255, 255, 0.35);
 }
 
 /* The SVG scales down to whatever space is left, keeping its proportions */

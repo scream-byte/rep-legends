@@ -8,6 +8,7 @@ import { SettingsModal } from '../ui/SettingsModal';
 import { StatsModal } from '../ui/StatsModal';
 import { Hero } from '../ui/Hero';
 import { LevelBadge } from '../ui/LevelBadge';
+import { MenuBackdrop } from '../ui/MenuBackdrop';
 import {
   FriendsIcon,
   HelmetIcon,
@@ -75,7 +76,7 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
 
   return (
     <div className="app">
-      <div className="rays" aria-hidden />
+      <MenuBackdrop />
 
       {/* Top bar: level + XP, rank */}
       <header className="topbar">
