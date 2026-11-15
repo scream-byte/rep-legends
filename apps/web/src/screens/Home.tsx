@@ -137,7 +137,13 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
         >
           {t.play}
         </button>
-        <button className="btn3d tile" onClick={soon}>
+        <button
+          className="btn3d tile"
+          onClick={() => {
+            sfx.click();
+            onPlay();
+          }}
+        >
           <SwordsIcon size={44} />
           <span className="outlined">{t.arenas}</span>
         </button>
@@ -146,7 +152,20 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
       {/* Bottom navigation */}
       <nav className="bottom-nav">
         {nav.map((n) => (
-          <button key={n.key} className={n.active ? 'active' : ''} onClick={n.active ? undefined : soon}>
+          <button
+            key={n.key}
+            className={n.active ? 'active' : ''}
+            onClick={
+              n.active
+                ? undefined
+                : n.key === 'arenas'
+                  ? () => {
+                      sfx.click();
+                      onPlay();
+                    }
+                  : soon
+            }
+          >
             {n.icon}
             <span className="outlined">{n.label}</span>
           </button>

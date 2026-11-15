@@ -1,12 +1,13 @@
-﻿// Push-up recognition: turns per-frame pose landmarks into counted reps.
+// Push-up recognition: turns per-frame pose landmarks into counted reps.
 //
 // How it works (side view):
-//   * elbow angle = shoulderвЂ“elbowвЂ“wrist; ~170В° arms straight, <90В° at the bottom
-//   * body line   = shoulderвЂ“hipвЂ“ankle; ~180В° for a straight plank
-// A rep counts only after a full cycle UP в†’ DOWN в†’ UP that passes the checks
+//   * elbow angle = shoulder–elbow–wrist; ~170° arms straight, <90° at the bottom
+//   * body line   = shoulder–hip–ankle; ~180° for a straight plank
+// A rep counts only after a full cycle UP → DOWN → UP that passes the checks
 // below. Thresholds are starting values and will be tuned on real people.
 
-import { angle, toPx, type Pt } from '../pose/geometry.ts';
+import { angle, toPx } from '../pose/geometry.ts';
+import type { BaseFrame, Counter, ExerciseDef, Landmark, RepRecord, RepUpdate } from './types.ts';
 
 export const PUSHUP_RULES = {
   /** elbow angle below this = bottom of the rep */
@@ -15,7 +16,7 @@ export const PUSHUP_RULES = {
   upAngle: 155,
   /** elbow angle below this = a rep attempt has started */
   descentStart: 140,
-  /** shoulderвЂ“hipвЂ“ankle must stay above this (no sagging / piking) */
+  /** shoulder–hip–ankle must stay above this (no sagging / piking) */
   minBodyLine: 150,
   /** a real push-up takes at least this long (measured from arms leaving the straight position) */
   minRepMs: 400,
@@ -34,23 +35,31 @@ const SIDES = {
 } as const;
 type Side = keyof typeof SIDES;
 
-export interface Landmark {
-  x: number;
-  y: number;
-  visibility?: number;
-}
-
-export interface PushupFrame {
-  visible: boolean;
+export interface PushupFrame extends BaseFrame {
   side: Side | null;
   plank: boolean;
   elbow: number | null;
   bodyLine: number | null;
-  /** pixel points of the tracked side, for the debug overlay */
-  points: Pt[] | null;
 }
 
-const EMPTY: PushupFrame = { visible: false, side: null, plank: false, elbow: null, bodyLine: null, points: null };
+const EMPTY: PushupFrame = {
+  visible: false,
+  side: null,
+  plank: false,
+  elbow: null,
+  bodyLine: null,
+  points: null,
+  lines: [],
+  debug: '—',
+};
+
+// shoulder–elbow–wrist and shoulder–hip–ankle, as indexes into `points`
+const PUSHUP_LINES: Array<[number, number]> = [
+  [0, 1],
+  [1, 2],
+  [0, 3],
+  [3, 4],
+];
 
 /** Measures one frame. Picks whichever side of the body the camera sees better. */
 export function measurePushup(lms: Landmark[] | undefined, width: number, height: number): PushupFrame {
@@ -69,13 +78,17 @@ export function measurePushup(lms: Landmark[] | undefined, width: number, height
   const [sh, el, wr, hip, ank] = [s.sh, s.el, s.wr, s.hip, s.ank].map((i) => toPx(lms[i], width, height));
   const dx = Math.abs(sh.x - ank.x);
   const dy = Math.abs(sh.y - ank.y);
+  const elbow = angle(sh, el, wr);
+  const bodyLine = angle(sh, hip, ank);
   return {
     visible: bestVis >= PUSHUP_RULES.minVisibility,
     side: best,
     plank: dx > dy * PUSHUP_RULES.plankRatio,
-    elbow: angle(sh, el, wr),
-    bodyLine: angle(sh, hip, ank),
+    elbow,
+    bodyLine,
     points: [sh, el, wr, hip, ank],
+    lines: PUSHUP_LINES,
+    debug: `${best} · elbow ${Math.round(elbow)}° · body ${Math.round(bodyLine)}°`,
   };
 }
 
@@ -89,28 +102,16 @@ export function calibrationHint(f: PushupFrame): CalibrationHint {
   return 'hold';
 }
 
+/** Hint keys (texts live in i18n `exercises.pushup.hints`). */
 export type RepHint = 'lower' | 'back' | 'fast' | 'lost' | 'plank';
 
-/** Summary of one counted rep вЂ” will be sent to the server for checks in stage 2. */
-export interface RepRecord {
-  tMs: number;
-  durationMs: number;
-  minElbow: number;
-  minBodyLine: number;
-}
-
-export interface RepUpdate {
-  counted: boolean;
-  hint: RepHint | null;
-}
-
-export class PushupCounter {
+export class PushupCounter implements Counter<PushupFrame> {
   reps = 0;
   readonly log: RepRecord[] = [];
   private phase: 'up' | 'down' = 'up';
   private smooth: number | null = null;
   private repStart: number | null = null;
-  /** last moment the arms were straight вЂ” the true start of the next rep */
+  /** last moment the arms were straight — the true start of the next rep */
   private lastTopAt: number | null = null;
   private minElbow = 180;
   private minBody = 180;
@@ -169,3 +170,12 @@ export class PushupCounter {
     return { counted: true, hint: null };
   }
 }
+
+export const pushupExercise: ExerciseDef<PushupFrame> = {
+  id: 'pushup',
+  measure: measurePushup,
+  calibrationHint,
+  createCounter: () => new PushupCounter(),
+  holdMs: 1000,
+  countdown: 3,
+};

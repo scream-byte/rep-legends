@@ -21,6 +21,7 @@ export function save(key: string, value: string): void {
 
 export const keys = {
   warmupAck: 'warmupAck',
-  bestPushups: 'best.pushup',
+  /** personal record per exercise, e.g. best('pullup') → 'best.pullup' */
+  best: (exercise: string) => `best.${exercise}`,
   settings: 'settings',
 } as const;

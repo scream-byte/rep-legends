@@ -65,15 +65,66 @@ export const en: typeof ru = {
     accept: "Got it, I'm warmed up",
   },
 
+  arenasScreen: {
+    title: 'Arenas',
+    subtitle: 'Choose where to fight',
+    trains: (stat: string) => `Trains: ${stat}`,
+    best: 'Best',
+    locked: 'Soon',
+    back: 'Back',
+  },
+
+  exercises: {
+    pushup: {
+      name: 'Push-ups',
+      setup: [
+        'Stand the phone upright on the floor or a low support, screen facing you.',
+        'Get into a push-up position side-on to the phone, 2–2.5 m away.',
+        'Your head, arms, hips and legs must be fully in frame.',
+        'Good lighting = accurate counting.',
+      ],
+      calibrate: {
+        notVisible: 'Make sure your whole body is in frame',
+        notPlank: 'Get into a push-up position side-on',
+        armsStraight: 'Straighten your arms',
+        hold: 'Great! Hold still…',
+      } as Record<string, string>,
+      hints: {
+        lower: 'Go lower!',
+        back: 'Keep your back straight!',
+        fast: 'Too fast!',
+        lost: "Can't see you",
+        plank: 'Get into a push-up position',
+      } as Record<string, string>,
+    },
+    pullup: {
+      name: 'Pull-ups',
+      setup: [
+        'Put the phone on the floor 2–3 m in front of the bar, screen facing you, leaning on something so the camera looks slightly up.',
+        'Stand under the bar facing the phone. Your hands on the bar, head and shoulders must be in frame.',
+        'Hang with straight arms — counting starts by itself.',
+        'A rep counts when your chin reaches the bar and your arms were fully straight at the bottom.',
+        'Jump off the bar — the set ends by itself after 3 seconds.',
+      ],
+      calibrate: {
+        notVisible: 'Make sure your arms, head and shoulders are in frame',
+        notHanging: 'Hang on the bar',
+        armsStraight: 'Straighten your arms — full hang',
+        hold: "Great! Let's go…",
+      } as Record<string, string>,
+      hints: {
+        higher: 'Chin over the bar!',
+        extend: 'Straighten your arms at the bottom!',
+        fast: 'Too fast!',
+        lost: "Can't see you",
+      } as Record<string, string>,
+    },
+    squat: { name: 'Squats' },
+    abs: { name: 'Abs' },
+  },
+
   workout: {
-    title: 'Push-ups',
     setupTitle: 'How to place your phone',
-    setup: [
-      'Stand the phone upright on the floor or a low support, screen facing you.',
-      'Get into a push-up position side-on to the phone, 2–2.5 m away.',
-      'Your head, arms, hips and legs must be fully in frame.',
-      'Good lighting = accurate counting.',
-    ],
     startCamera: 'Turn on camera',
     loadingModel: 'Starting camera and pose detection…',
     cameraDenied: 'No camera access. Allow the camera for Telegram in your phone settings and reopen the game.',
@@ -82,18 +133,7 @@ export const en: typeof ru = {
     tryAgain: 'Try again',
     switchCamera: 'Switch camera',
     debug: 'Debug',
-    calibrate: {
-      notVisible: 'Make sure your whole body is in frame',
-      notPlank: 'Get into a push-up position side-on',
-      armsStraight: 'Straighten your arms',
-      hold: 'Great! Hold still…',
-    },
-    hints: {
-      lower: 'Go lower!',
-      back: 'Keep your back straight!',
-      fast: 'Too fast!',
-      lost: "Can't see you",
-    },
+    autoFinish: (s: number) => `Set ends in ${s}…`,
     stop: 'Stop',
     reps: 'reps',
     resultTitle: 'Done!',
@@ -102,5 +142,6 @@ export const en: typeof ru = {
     newBest: 'New record!',
     again: 'Again',
     home: 'Home',
+    toArenas: 'To arenas',
   },
 };

@@ -1,26 +1,25 @@
 import { PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sfx } from '../audio/sfx';
-import {
-  calibrationHint,
-  measurePushup,
-  PushupCounter,
-  type CalibrationHint,
-  type PushupFrame,
-  type RepHint,
-} from '../exercises/pushup';
+import { EXERCISES, type ExerciseId } from '../exercises';
+import type { BaseFrame, Counter } from '../exercises/types';
 import type { Dict } from '../i18n';
 import { CameraError, keepScreenOn, startCamera, stopStream, type Facing } from '../pose/camera';
 import { loadPoseLandmarker, type LoadedLandmarker } from '../pose/landmarker';
 import { keys, load, save } from '../storage';
 import { haptic, hapticNotify, showBackButton } from '../telegram/tg';
+import { SetupArt } from '../ui/SetupArt';
 import './workout.css';
 
 type Phase = 'setup' | 'loading' | 'calibrating' | 'countdown' | 'active' | 'result' | 'error';
 
 interface Props {
   t: Dict;
-  onExit: () => void;
+  exercise: ExerciseId;
+  /** Telegram back arrow / "to arenas" */
+  onBack: () => void;
+  /** "Home" button on the result screen */
+  onHome: () => void;
 }
 
 interface Result {
@@ -30,23 +29,16 @@ interface Result {
   newBest: boolean;
 }
 
-interface DebugStats {
-  fps: number;
-  delegate: string;
-  side: string;
-  elbow: number | null;
-  body: number | null;
-}
-
-const HOLD_MS = 1000; // how long the player must hold the start pose
-const COUNTDOWN_FROM = 3;
-
 function formatTime(ms: number): string {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function Pushups({ t, onExit }: Props) {
+/** One camera workout screen for every exercise (see src/exercises/types.ts). */
+export function Workout({ t, exercise, onBack, onHome }: Props) {
+  const def = EXERCISES[exercise];
+  const text = t.exercises[exercise];
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -57,27 +49,29 @@ export function Pushups({ t, onExit }: Props) {
   const timersRef = useRef<number[]>([]);
   const releaseWakeRef = useRef<() => void>(() => {});
   const phaseRef = useRef<Phase>('setup');
-  const counterRef = useRef(new PushupCounter());
+  const counterRef = useRef<Counter<BaseFrame>>(def.createCounter());
   const holdSinceRef = useRef<number | null>(null);
-  const calibRef = useRef<CalibrationHint | null>(null);
+  const calibRef = useRef<string | null>(null);
   const lostRef = useRef(false);
+  const outSinceRef = useRef<number | null>(null);
+  const autoLeftRef = useRef<number | null>(null);
   const startedAtRef = useRef(0);
   const debugRef = useRef(false);
   const switchingDelegateRef = useRef(false);
 
   const [phase, setPhaseState] = useState<Phase>('setup');
   const [facing, setFacing] = useState<Facing>('user');
-  const [loadingText, setLoadingText] = useState('');
   const [errorText, setErrorText] = useState('');
-  const [calib, setCalib] = useState<CalibrationHint>('notVisible');
-  const [countdown, setCountdown] = useState(COUNTDOWN_FROM);
+  const [calib, setCalib] = useState('notVisible');
+  const [countdown, setCountdown] = useState(def.countdown);
   const [reps, setReps] = useState(0);
-  const [hint, setHint] = useState<{ key: RepHint; id: number } | null>(null);
+  const [hint, setHint] = useState<{ key: string; id: number } | null>(null);
   const [lost, setLost] = useState(false);
+  const [autoLeft, setAutoLeft] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [debug, setDebug] = useState(false);
-  const [stats, setStats] = useState<DebugStats>({ fps: 0, delegate: '—', side: '—', elbow: null, body: null });
+  const [stats, setStats] = useState({ fps: 0, delegate: '—', line: '—' });
 
   const setPhase = (p: Phase) => {
     phaseRef.current = p;
@@ -100,13 +94,13 @@ export function Pushups({ t, onExit }: Props) {
     releaseWakeRef.current = () => {};
   }, []);
 
-  const exit = useCallback(() => {
+  const back = useCallback(() => {
     stopAll();
-    onExit();
-  }, [stopAll, onExit]);
+    onBack();
+  }, [stopAll, onBack]);
 
   // Telegram's native back arrow + cleanup when leaving the screen.
-  useEffect(() => showBackButton(exit), [exit]);
+  useEffect(() => showBackButton(back), [back]);
   useEffect(() => stopAll, [stopAll]);
 
   // Start downloading the model while the player reads the instructions.
@@ -125,11 +119,26 @@ export function Pushups({ t, onExit }: Props) {
     return () => clearTimeout(id);
   }, [hint]);
 
-  // ---------- per-frame handling ----------
+  // ---------- set flow ----------
+
+  function startSet() {
+    sfx.go();
+    counterRef.current = def.createCounter();
+    outSinceRef.current = null;
+    autoLeftRef.current = null;
+    setAutoLeft(null);
+    setReps(0);
+    startedAtRef.current = performance.now();
+    setElapsed(0);
+    setPhase('active');
+    hapticNotify('success');
+    timersRef.current.push(window.setInterval(() => setElapsed(performance.now() - startedAtRef.current), 250));
+  }
 
   function startCountdown() {
+    if (def.countdown <= 0) return startSet();
     setPhase('countdown');
-    let n = COUNTDOWN_FROM;
+    let n = def.countdown;
     setCountdown(n);
     haptic('light');
     sfx.countdown();
@@ -141,30 +150,23 @@ export function Pushups({ t, onExit }: Props) {
         sfx.countdown();
         return;
       }
-      sfx.go();
       clearInterval(id);
-      counterRef.current = new PushupCounter();
-      setReps(0);
-      startedAtRef.current = performance.now();
-      setElapsed(0);
-      setPhase('active');
-      hapticNotify('success');
-      timersRef.current.push(window.setInterval(() => setElapsed(performance.now() - startedAtRef.current), 250));
+      startSet();
     }, 1000);
     timersRef.current.push(id);
   }
 
-  function handleFrame(f: PushupFrame, now: number) {
+  function handleFrame(f: BaseFrame, now: number) {
     const p = phaseRef.current;
     if (p === 'calibrating') {
-      const h = calibrationHint(f);
+      const h = def.calibrationHint(f);
       if (h !== calibRef.current) {
         calibRef.current = h;
         setCalib(h);
       }
       if (h === 'hold') {
         holdSinceRef.current ??= now;
-        if (now - holdSinceRef.current >= HOLD_MS) {
+        if (now - holdSinceRef.current >= def.holdMs) {
           holdSinceRef.current = null;
           startCountdown();
         }
@@ -174,6 +176,26 @@ export function Pushups({ t, onExit }: Props) {
       return;
     }
     if (p !== 'active') return;
+
+    // Auto-finish (e.g. pull-ups: jumped off the bar and didn't come back).
+    if (def.inPosition && def.autoFinishMs) {
+      if (def.inPosition(f)) {
+        outSinceRef.current = null;
+        if (autoLeftRef.current != null) {
+          autoLeftRef.current = null;
+          setAutoLeft(null);
+        }
+      } else {
+        outSinceRef.current ??= now;
+        const leftMs = def.autoFinishMs - (now - outSinceRef.current);
+        if (leftMs <= 0) return finish();
+        const secs = Math.ceil(leftMs / 1000);
+        if (secs !== autoLeftRef.current) {
+          autoLeftRef.current = secs;
+          setAutoLeft(secs);
+        }
+      }
+    }
 
     const u = counterRef.current.update(f, now);
     const isLost = u.hint === 'lost';
@@ -192,7 +214,7 @@ export function Pushups({ t, onExit }: Props) {
     }
   }
 
-  function drawDebug(lms: NormalizedLandmark[] | undefined, f: PushupFrame) {
+  function drawDebug(lms: NormalizedLandmark[] | undefined, f: BaseFrame) {
     const canvas = canvasRef.current;
     const video = videoRef.current;
     if (!canvas || !video) return;
@@ -215,19 +237,17 @@ export function Pushups({ t, onExit }: Props) {
       ctx.stroke();
     }
     if (f.points) {
-      const [sh, el, wr, hip, ank] = f.points;
+      const pts = f.points;
       ctx.lineWidth = 6;
       ctx.strokeStyle = f.visible ? '#ffd400' : '#ff3d5a';
       ctx.beginPath();
-      ctx.moveTo(sh.x, sh.y);
-      ctx.lineTo(el.x, el.y);
-      ctx.lineTo(wr.x, wr.y);
-      ctx.moveTo(sh.x, sh.y);
-      ctx.lineTo(hip.x, hip.y);
-      ctx.lineTo(ank.x, ank.y);
+      for (const [a, b] of f.lines) {
+        ctx.moveTo(pts[a].x, pts[a].y);
+        ctx.lineTo(pts[b].x, pts[b].y);
+      }
       ctx.stroke();
       ctx.fillStyle = '#ff8a1f';
-      for (const pt of f.points) {
+      for (const pt of pts) {
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
         ctx.fill();
@@ -240,7 +260,7 @@ export function Pushups({ t, onExit }: Props) {
     let lastTs = 0;
     let frames = 0;
     let fpsWindowStart = performance.now();
-    let lastFrame: PushupFrame | null = null;
+    let lastLine = '—';
 
     const tick = () => {
       rafRef.current = requestAnimationFrame(tick);
@@ -270,8 +290,8 @@ export function Pushups({ t, onExit }: Props) {
         return;
       }
 
-      const f = measurePushup(lms, video.videoWidth, video.videoHeight);
-      lastFrame = f;
+      const f = def.measure(lms, video.videoWidth, video.videoHeight);
+      lastLine = f.debug;
       handleFrame(f, now);
       if (debugRef.current) drawDebug(lms, f);
 
@@ -280,15 +300,7 @@ export function Pushups({ t, onExit }: Props) {
         const fps = Math.round((frames * 1000) / (now - fpsWindowStart));
         frames = 0;
         fpsWindowStart = now;
-        if (debugRef.current) {
-          setStats({
-            fps,
-            delegate: lmRef.current?.delegate ?? '—',
-            side: lastFrame?.side ?? '—',
-            elbow: lastFrame?.elbow != null ? Math.round(lastFrame.elbow) : null,
-            body: lastFrame?.bodyLine != null ? Math.round(lastFrame.bodyLine) : null,
-          });
-        }
+        if (debugRef.current) setStats({ fps, delegate: lmRef.current?.delegate ?? '—', line: lastLine });
       }
     };
     cancelAnimationFrame(rafRef.current);
@@ -308,12 +320,8 @@ export function Pushups({ t, onExit }: Props) {
     if (!video) return;
     stopAll();
     setPhase('loading');
-    setLoadingText(t.workout.loadingModel);
 
-    const [model, camera] = await Promise.allSettled([
-      loadPoseLandmarker(),
-      startCamera(video, cameraFacing),
-    ]);
+    const [model, camera] = await Promise.allSettled([loadPoseLandmarker(), startCamera(video, cameraFacing)]);
 
     if (camera.status === 'rejected') {
       if (model.status === 'fulfilled') lmRef.current = model.value;
@@ -345,11 +353,12 @@ export function Pushups({ t, onExit }: Props) {
   }
 
   function finish() {
+    if (phaseRef.current !== 'active') return;
     const ms = performance.now() - startedAtRef.current;
     const count = counterRef.current.reps;
-    const prev = Number(load(keys.bestPushups) ?? 0) || 0;
+    const prev = Number(load(keys.best(exercise)) ?? 0) || 0;
     const newBest = count > prev;
-    if (newBest) save(keys.bestPushups, String(count));
+    if (newBest) save(keys.best(exercise), String(count));
     stopAll();
     setResult({ reps: count, ms, best: Math.max(prev, count), newBest });
     setPhase('result');
@@ -359,7 +368,7 @@ export function Pushups({ t, onExit }: Props) {
 
   // ---------- render ----------
 
-  const hintText = (h: RepHint) => (h === 'plank' ? t.workout.calibrate.notPlank : h === 'lost' ? t.workout.hints.lost : t.workout.hints[h]);
+  const hintText = useMemo(() => (key: string) => text.hints[key] ?? key, [text]);
   const cameraOn = phase === 'calibrating' || phase === 'countdown' || phase === 'active';
   const mirror = facing === 'user' ? 'mirror' : '';
 
@@ -373,10 +382,11 @@ export function Pushups({ t, onExit }: Props) {
       {phase === 'setup' && (
         <div className="w-panel-wrap">
           <div className="panel">
+            <p className="panel-kicker">{text.name}</p>
             <h2 className="outlined">{t.workout.setupTitle}</h2>
-            <PhoneSetupArt />
+            <SetupArt exercise={exercise} />
             <ol className="panel-list">
-              {t.workout.setup.map((s) => (
+              {text.setup.map((s) => (
                 <li key={s}>{s}</li>
               ))}
             </ol>
@@ -390,7 +400,7 @@ export function Pushups({ t, onExit }: Props) {
       {phase === 'loading' && (
         <div className="w-center">
           <div className="spinner" />
-          <p className="outlined">{loadingText}</p>
+          <p className="outlined">{t.workout.loadingModel}</p>
         </div>
       )}
 
@@ -402,8 +412,8 @@ export function Pushups({ t, onExit }: Props) {
             <button className="btn3d primary" onClick={() => begin()}>
               {t.workout.tryAgain}
             </button>
-            <button className="btn3d secondary" onClick={exit}>
-              {t.workout.home}
+            <button className="btn3d secondary" onClick={back}>
+              {t.workout.toArenas}
             </button>
           </div>
         </div>
@@ -411,7 +421,7 @@ export function Pushups({ t, onExit }: Props) {
 
       {phase === 'calibrating' && (
         <>
-          <div className={`banner ${calib === 'hold' ? 'ok' : ''}`}>{t.workout.calibrate[calib]}</div>
+          <div className={`banner ${calib === 'hold' ? 'ok' : ''}`}>{text.calibrate[calib] ?? calib}</div>
           <div className="w-bottom">
             <button className="btn3d small" onClick={switchCamera}>
               🔄 {t.workout.switchCamera}
@@ -442,8 +452,12 @@ export function Pushups({ t, onExit }: Props) {
             </div>
             <div className="timer outlined">{formatTime(elapsed)}</div>
           </div>
-          {lost && <div className="banner warn-banner">{t.workout.hints.lost}</div>}
-          {hint && !lost && (
+          {autoLeft != null ? (
+            <div className="banner warn-banner">{t.workout.autoFinish(autoLeft)}</div>
+          ) : (
+            lost && <div className="banner warn-banner">{hintText('lost')}</div>
+          )}
+          {hint && !lost && autoLeft == null && (
             <div key={hint.id} className="hint-pop outlined">
               {hintText(hint.key)}
             </div>
@@ -462,6 +476,7 @@ export function Pushups({ t, onExit }: Props) {
       {phase === 'result' && result && (
         <div className="w-panel-wrap">
           <div className="panel">
+            <p className="panel-kicker">{text.name}</p>
             <h2 className="outlined">{t.workout.resultTitle}</h2>
             <div className="result-reps outlined">{result.reps}</div>
             <p className="result-label">{t.workout.reps}</p>
@@ -477,47 +492,31 @@ export function Pushups({ t, onExit }: Props) {
             <button className="btn3d primary" onClick={() => begin()}>
               {t.workout.again}
             </button>
-            <button className="btn3d secondary" onClick={exit}>
-              {t.workout.home}
-            </button>
+            <div className="result-actions">
+              <button className="btn3d secondary" onClick={back}>
+                {t.workout.toArenas}
+              </button>
+              <button
+                className="btn3d secondary"
+                onClick={() => {
+                  stopAll();
+                  onHome();
+                }}
+              >
+                {t.workout.home}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {debug && cameraOn && (
         <div className="debug-info">
-          FPS {stats.fps} · {stats.delegate} · {stats.side}
+          FPS {stats.fps} · {stats.delegate}
           <br />
-          elbow {stats.elbow ?? '—'}° · body {stats.body ?? '—'}°
+          {stats.line}
         </div>
       )}
     </div>
-  );
-}
-
-/** Simple picture: phone standing on the floor, player in a plank side-on. */
-function PhoneSetupArt() {
-  const ink = '#1b1d4a';
-  return (
-    <svg className="setup-art" viewBox="0 0 300 120" aria-hidden>
-      <path d="M10 104 H290" stroke={ink} strokeWidth="4" strokeLinecap="round" />
-      {/* phone */}
-      <rect x="22" y="52" width="28" height="50" rx="5" fill="#fff" stroke={ink} strokeWidth="4" />
-      <circle cx="36" cy="60" r="3" fill={ink} />
-      {/* field of view */}
-      <path d="M50 66 L285 30 M50 66 L285 104" stroke="#5cc8ff" strokeWidth="3" strokeDasharray="6 6" />
-      {/* distance */}
-      <path d="M56 109 H150 M56 106 v6 M150 106 v6" stroke={ink} strokeWidth="2" />
-      <text x="103" y="119" textAnchor="middle" fontSize="10" fontWeight="800" fill={ink}>
-        2–2.5 m
-      </text>
-      {/* player in plank */}
-      <g stroke={ink} strokeWidth="7" strokeLinecap="round" fill="none">
-        <path d="M170 70 L272 96" stroke="#ff8a1f" />
-        <path d="M178 72 L178 101" />
-        <path d="M272 96 L284 101" />
-      </g>
-      <circle cx="160" cy="66" r="10" fill="#ff8a1f" stroke={ink} strokeWidth="4" />
-    </svg>
   );
 }

@@ -887,6 +887,164 @@ input[type='range']::-moz-range-thumb {
   transition-duration: 0.001s !important;
 }
 
+/* ---------- arena picker ---------- */
+.arenas-screen {
+  gap: 14px;
+}
+
+.arenas-head {
+  margin-inline: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #d6e6ff;
+}
+
+.arenas-head h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.arenas-head p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.arenas-back {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--ink);
+  background: linear-gradient(#ffffff, #cfe0ff);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--ink);
+}
+
+.arena-list {
+  margin: 0 12px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1 1 auto !important;
+  min-height: 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.arena-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--white);
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  box-shadow:
+    inset 0 4px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -6px 0 rgba(0, 0, 0, 0.18),
+    0 5px 0 var(--ink);
+}
+
+.arena-card:active:not(.locked) {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 4px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -6px 0 rgba(0, 0, 0, 0.18),
+    0 1px 0 var(--ink);
+}
+
+.arena-pushup {
+  background: linear-gradient(#ffb04d, #f2751f);
+}
+
+.arena-pullup {
+  background: linear-gradient(#7cb6ff, #3f7bf0);
+}
+
+.arena-squat {
+  background: linear-gradient(#ff7a90, #e0324f);
+}
+
+.arena-abs {
+  background: linear-gradient(#7fe0c0, #2fae86);
+}
+
+.arena-card.locked {
+  filter: grayscale(0.75) brightness(0.8);
+  cursor: default;
+}
+
+.arena-icon {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+}
+
+.arena-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.arena-text b {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.arena-text small {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.arena-best {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.arena-best small {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.arena-best b {
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.arena-lock {
+  font-size: 13px;
+  font-weight: 800;
+  padding: 6px 10px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
 /* ---------- info panels (warm-up notice, workout setup, results) ---------- */
 .panel-screen {
   justify-content: center;
@@ -916,6 +1074,23 @@ input[type='range']::-moz-range-thumb {
   margin: 0;
   text-align: center;
   font-size: 26px;
+}
+
+/* small exercise name above a panel title */
+.panel-kicker {
+  margin: 0 0 -8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #3a4590;
+}
+
+.result-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .panel-icon {
