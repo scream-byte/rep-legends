@@ -139,6 +139,7 @@ button {
 }
 
 .rank-pill {
+  margin-left: auto; /* rank + gear group on the right, level on the left */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -162,11 +163,19 @@ button {
 }
 
 /* ---------- hero stats: one button + a modal ---------- */
-/* "Stats" button sits in the top-left corner of the hero area, under "Friends" */
-.stats-btn {
-  position: absolute;
-  left: 0;
-  top: 6px;
+/* Icon-only settings gear at the right end of the top bar */
+.gear-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 3px 0 rgba(20, 22, 60, 0.45));
+  transition: transform 0.25s;
+}
+
+.gear-btn:active {
+  transform: rotate(60deg) scale(0.92);
 }
 
 .stat-list {

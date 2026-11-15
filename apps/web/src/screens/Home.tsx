@@ -10,10 +10,10 @@ import { Hero } from '../ui/Hero';
 import { LevelBadge } from '../ui/LevelBadge';
 import {
   FriendsIcon,
-  GearIcon,
   HelmetIcon,
   HomeIcon,
   ScrollIcon,
+  SettingsGearIcon,
   StatsIcon,
   SwordsIcon,
   TrophyIcon,
@@ -90,6 +90,9 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
           <span>{t.rank}</span>
           <b className="outlined">{HERO.rank}</b>
         </div>
+        <button className="gear-btn" aria-label={t.settings} title={t.settings} onClick={openSettings}>
+          <SettingsGearIcon size={46} />
+        </button>
       </header>
 
       {/* Stage: side buttons around the greeting, hero fills the rest */}
@@ -102,18 +105,14 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
           <b>{t.hello(name)}</b>
           <span>{t.readyLine}</span>
         </div>
-        <button className="side-btn" onClick={openSettings}>
-          <GearIcon size={40} />
-          <span className="outlined">{t.settings}</span>
+        {/* Hero stats live behind one button so the hero gets more room */}
+        <button className="side-btn" onClick={openStats}>
+          <StatsIcon size={40} />
+          <span className="outlined">{t.statsPanel.button}</span>
         </button>
 
         <div className="hero-box">
           <Hero className="hero" />
-          {/* Hero stats live behind one button so the hero gets more room */}
-          <button className="side-btn stats-btn" onClick={openStats}>
-            <StatsIcon size={40} />
-            <span className="outlined">{t.statsPanel.button}</span>
-          </button>
           {!soundOn && (
             // Any tap unlocks audio (handled globally); this button just invites one.
             <button className="sound-hint" aria-label={t.enableSound} title={t.enableSound} onClick={() => haptic('light')}>

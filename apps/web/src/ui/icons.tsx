@@ -43,6 +43,45 @@ export const FriendsIcon = (p: P) => (
   </Svg>
 );
 
+// Builds a chunky gear outline: `teeth` trapezoid teeth between two radii.
+function gearOutline(cx: number, cy: number, rOuter: number, rInner: number, teeth: number): string {
+  const step = (Math.PI * 2) / teeth;
+  const pt = (r: number, a: number) => `${(cx + r * Math.cos(a)).toFixed(2)} ${(cy + r * Math.sin(a)).toFixed(2)}`;
+  const parts: string[] = [];
+  for (let i = 0; i < teeth; i++) {
+    const a = i * step - Math.PI / 2;
+    parts.push(pt(rInner, a - step * 0.3), pt(rOuter, a - step * 0.19), pt(rOuter, a + step * 0.19), pt(rInner, a + step * 0.3));
+  }
+  return `M${parts.join(' L')} Z`;
+}
+// A circle sub-path; with fillRule="evenodd" it becomes a see-through hole.
+const hole = (cx: number, cy: number, r: number) =>
+  `M${cx + r} ${cy} A${r} ${r} 0 1 0 ${cx - r} ${cy} A${r} ${r} 0 1 0 ${cx + r} ${cy} Z`;
+const GEAR_FRONT = `${gearOutline(22, 22, 19, 14.5, 6)} ${hole(22, 22, 6)}`;
+const GEAR_BACK = `${gearOutline(25, 25.5, 19, 14.5, 6)} ${hole(25, 25.5, 6)}`;
+
+/** Chunky 3D steel gear for the Settings button (icon only). */
+export function SettingsGearIcon({ size = 44 }: P) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
+      <defs>
+        <linearGradient id="gear-face" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#d4e6f5" />
+          <stop offset="0.55" stopColor="#a8c3db" />
+          <stop offset="1" stopColor="#86a5c2" />
+        </linearGradient>
+      </defs>
+      {/* side / thickness */}
+      <path d={GEAR_BACK} fill="#4f6d8c" fillRule="evenodd" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+      {/* front face */}
+      <path d={GEAR_FRONT} fill="url(#gear-face)" fillRule="evenodd" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+      {/* inner rim shading of the hole + a highlight on the face */}
+      <path d="M16.6 24.8 A6 6 0 0 1 24.8 16.6" fill="none" stroke="#5f7d9c" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M11 15 Q14 10 19 8.5" fill="none" stroke="#f2f8ff" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export const GearIcon = (p: P) => (
   <Svg {...p}>
     <path
