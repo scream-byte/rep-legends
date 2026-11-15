@@ -335,6 +335,7 @@ button {
   transform: translateX(-50%);
   border-radius: 50%;
   pointer-events: none;
+  z-index: 0; /* behind the hero: the feet cover the ring where they touch it */
 }
 
 /* both are centred on the hero's foot line (var(--podium-y) above the box bottom) */
@@ -367,6 +368,7 @@ button {
   object-position: 50% 100%;
   filter: drop-shadow(0 8px 6px rgba(5, 10, 40, 0.45));
   pointer-events: none;
+  z-index: 1; /* above the podium ring */
   /* "breathing" idle: feet stay planted on the podium, the body gently rises */
   animation: breathe 2.6s ease-in-out infinite;
   transform-origin: 50% 100%;
