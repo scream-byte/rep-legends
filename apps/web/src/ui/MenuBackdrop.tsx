@@ -21,9 +21,10 @@ export function MenuBackdrop() {
     <svg className="menu-backdrop" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden>
       <defs>
         <radialGradient id="mb-sky" cx="0.5" cy="0.42" r="0.75">
-          <stop offset="0" stopColor="#8fdcff" />
-          <stop offset="0.45" stopColor="#3f93ff" />
-          <stop offset="1" stopColor="#1f3fae" />
+          {/* deep, calm blue: a soft glow behind the hero, dark towards the edges */}
+          <stop offset="0" stopColor="#3e78d6" />
+          <stop offset="0.5" stopColor="#1f429e" />
+          <stop offset="1" stopColor="#0e1a55" />
         </radialGradient>
         <pattern id="mb-dots" width="12" height="12" patternUnits="userSpaceOnUse">
           <circle cx="6" cy="6" r="1.6" fill="#fff" />
@@ -37,32 +38,32 @@ export function MenuBackdrop() {
           <rect width="400" height="800" fill="url(#mb-dot-fade)" />
         </mask>
         <linearGradient id="mb-arena" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#bfe6ff" stopOpacity="0.32" />
-          <stop offset="1" stopColor="#bfe6ff" stopOpacity="0.05" />
+          <stop offset="0" stopColor="#9fd0ff" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#9fd0ff" stopOpacity="0.03" />
         </linearGradient>
       </defs>
 
       <rect width="400" height="800" fill="url(#mb-sky)" />
 
       {/* soft rays from behind the hero */}
-      <g className="mb-rays" fill="#fff" opacity="0.07">
+      <g className="mb-rays" fill="#fff" opacity="0.045">
         {Array.from({ length: RAY_COUNT }, (_, i) => (
           <path key={i} d="M200 330 L185 -600 L215 -600 Z" transform={`rotate(${(360 / RAY_COUNT) * i} 200 330)`} />
         ))}
       </g>
 
       {/* comic halftone dots fading in towards the corners */}
-      <rect width="400" height="800" fill="url(#mb-dots)" mask="url(#mb-dot-mask)" opacity="0.14" />
+      <rect width="400" height="800" fill="url(#mb-dots)" mask="url(#mb-dot-mask)" opacity="0.08" />
 
       {/* drifting clouds */}
-      <g fill="#fff" opacity="0.16">
+      <g fill="#fff" opacity="0.08">
         <path className="mb-cloud" d="M-10 205 q8-20 30-14 q12-18 32-6 q22-4 22 18 z" />
         <path className="mb-cloud slow" d="M300 250 q8-18 28-12 q12-15 28-4 q20-2 18 16 z" />
         <path className="mb-cloud" d="M250 70 q6-14 22-9 q9-12 22-3 q15-1 13 12 z" />
       </g>
 
       {/* faint fitness outlines */}
-      <g fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.1">
+      <g fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity="0.07">
         {/* outer <g> places the shape; the inner one is animated by CSS
             (a CSS transform would otherwise replace the position) */}
         <g transform="translate(48 300) rotate(-24)">

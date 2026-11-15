@@ -62,7 +62,7 @@ button {
   gap: 10px;
   padding-top: calc(10px + env(safe-area-inset-top, 0px));
   overflow: hidden;
-  background: radial-gradient(120% 70% at 50% 45%, var(--blue-1) 0%, var(--blue-2) 55%, var(--blue-3) 100%);
+  background: radial-gradient(120% 70% at 50% 45%, #3e78d6 0%, #1f429e 55%, #0e1a55 100%);
 }
 
 @keyframes spin {
@@ -208,10 +208,11 @@ button {
   align-items: center;
   gap: 8px;
   padding: 4px 6px 4px 14px;
-  background: var(--navy);
+  background: linear-gradient(#5f8ef0, #3a62cf);
   border: 3px solid var(--ink);
   border-radius: 20px;
-  color: #cfe0ff;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+  color: #fff;
   font-size: 14px;
 }
 
@@ -336,40 +337,48 @@ button {
   pointer-events: none;
 }
 
+/* both are centred on the hero's foot line (var(--podium-y) above the box bottom) */
 .hero-box::before {
   width: min(78%, 320px);
   height: 46px;
-  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.55), rgba(190, 230, 255, 0.25) 60%, transparent);
+  bottom: calc(var(--podium-y) - 23px);
+  background: radial-gradient(closest-side, rgba(170, 215, 255, 0.5), rgba(120, 180, 255, 0.18) 60%, transparent);
 }
 
 .hero-box::after {
   width: min(56%, 230px);
   height: 22px;
-  bottom: 10px;
-  border: 3px solid rgba(255, 255, 255, 0.35);
+  bottom: calc(var(--podium-y) - 11px);
+  border: 3px solid rgba(200, 230, 255, 0.4);
 }
 
 /* The SVG scales down to whatever space is left, keeping its proportions */
+/* The hero's feet rest exactly on the podium ring (its centre is PODIUM_Y above the box bottom). */
+.hero-box {
+  --podium-y: 16px;
+}
+
 .hero {
   position: absolute;
-  inset: 0;
+  inset: 0 0 var(--podium-y) 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% - var(--podium-y));
   object-fit: contain; /* whole picture visible, never stretched */
   object-position: 50% 100%;
-  filter: drop-shadow(0 8px 6px rgba(15, 30, 100, 0.35));
+  filter: drop-shadow(0 8px 6px rgba(5, 10, 40, 0.45));
   pointer-events: none;
-  animation: bob 2.4s ease-in-out infinite;
+  /* "breathing" idle: feet stay planted on the podium, the body gently rises */
+  animation: breathe 2.6s ease-in-out infinite;
   transform-origin: 50% 100%;
 }
 
-@keyframes bob {
+@keyframes breathe {
   0%,
   100% {
-    transform: translateY(0) scale(1, 1);
+    transform: scale(1, 1);
   }
   50% {
-    transform: translateY(-6px) scale(1.01, 0.99);
+    transform: scale(0.99, 1.025);
   }
 }
 
@@ -424,10 +433,13 @@ button {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  background: linear-gradient(#3550b8, #232f86);
+  /* bright blue so it stands out on the dark background */
+  background: linear-gradient(#7cb6ff, #3f7bf0);
   border: 3px solid var(--ink);
   border-radius: 14px;
-  box-shadow: 0 4px 0 var(--ink);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.45),
+    0 4px 0 var(--ink);
   z-index: 2;
 }
 
@@ -482,7 +494,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  background: linear-gradient(#5aa2ff, #2f63e0);
+  background: linear-gradient(#8cc4ff, #4a86f2);
 }
 
 .tile span {
@@ -507,7 +519,7 @@ button {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: var(--navy);
+  background: linear-gradient(#4a72dc, #3253b8);
   border-top: 3px solid var(--ink);
 }
 
@@ -530,8 +542,8 @@ button {
 }
 
 .bottom-nav .active {
-  background: linear-gradient(#4a6fe0, #2b3d9e);
-  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.25);
+  background: linear-gradient(#8cc4ff, #4f8af2);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.45);
 }
 
 .bottom-nav .active svg {
