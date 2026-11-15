@@ -54,6 +54,7 @@
 - Репозиторий: https://github.com/silindanniil-byte/rep-legends (публичный; GitHub Pages Source = GitHub Actions)
 - Windows 11, Git 2.56, Node v26.13.1, npm 11.20. Git-автор в репо: `silindanniil-byte` (noreply email).
 - `git push` из сессии Claude работает (Git Credential Manager запомнил вход).
+- Коммиты делать через `git commit -m "заголовок" -m "текст" -m "Co-Authored-By: ..."` и **не прятать вывод** (`| Out-Null`): однажды here-string + перенаправление в PowerShell молча не создали коммит. После push сверять SHA сборки в Actions с `git rev-parse HEAD`.
 - В PowerShell-сессии Claude PATH к Node может не подхватиться — в начале команды:
   `$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")`
 
