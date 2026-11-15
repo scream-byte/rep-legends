@@ -100,14 +100,14 @@ export const en: typeof ru = {
     pullup: {
       name: 'Pull-ups',
       setup: [
-        'Put the phone on the floor 2–3 m in front of the bar, screen facing you, leaning on something so the camera looks slightly up.',
-        'Stand under the bar facing the phone. Your hands on the bar, head and shoulders must be in frame.',
+        'Put the phone on the floor 2–3 m from the bar, screen facing you, leaning on something so the camera looks slightly up.',
+        'Hang facing the phone or with your back to it — whichever is easier. Only your hands on the bar and shoulders must be in frame. Legs may be cut off.',
         'Hang with straight arms — counting starts by itself.',
         'A rep counts when your chin reaches the bar and your arms were fully straight at the bottom.',
         'Jump off the bar — the set ends by itself after 3 seconds.',
       ],
       calibrate: {
-        notVisible: 'Make sure your arms, head and shoulders are in frame',
+        notVisible: 'Arms and shoulders must be in frame (front or back — either works)',
         notHanging: 'Hang on the bar',
         armsStraight: 'Straighten your arms — full hang',
         hold: "Great! Let's go…",

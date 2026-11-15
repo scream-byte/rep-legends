@@ -3,11 +3,15 @@
 import { measurePullup, pullupCalibrationHint, PullupCounter, type PullupFrame } from './pullup.ts';
 
 const FPS = 30;
-const frame = (elbow: number, chinMargin: number, opts: Partial<PullupFrame> = {}): PullupFrame => ({
+const CHIN_TOL = 0.12;
+// The second argument is the chin height above the bar in shoulder widths (front-view
+// meaning); the counter works with `barScore` = chin + tolerance (≥ 0 = at the bar).
+const frame = (elbow: number, chin: number, opts: Partial<PullupFrame> = {}): PullupFrame => ({
   visible: true,
   hanging: true,
   elbow,
-  chinMargin,
+  barScore: chin + CHIN_TOL,
+  faceVisible: true,
   points: null,
   lines: [],
   debug: '',
@@ -71,21 +75,46 @@ run('brief loss of tracking mid-rep', withGap, 1);
 run('jumps off the bar mid-way', pull(1800).map((f, i) => (i > 10 ? { ...f, hanging: false } : f)), 0);
 run('15 fps phone', Array.from({ length: 4 }, () => [...pull(1800), ...hang(3)].filter((_, i) => i % 2 === 0)).flat(), 4, [], 15);
 
-// measurePullup on synthetic landmarks: athlete hanging, front view, 480x640 frame
-const lms = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.9 }));
-const set = (i: number, x: number, y: number) => (lms[i] = { x, y, visibility: 0.95 });
-set(0, 0.5, 0.42); // nose
-set(9, 0.48, 0.46);
-set(10, 0.52, 0.46); // mouth
-set(11, 0.4, 0.5);
-set(12, 0.6, 0.5); // shoulders
-set(13, 0.37, 0.35);
-set(14, 0.63, 0.35); // elbows (arms up, straight)
-set(15, 0.35, 0.2);
-set(16, 0.65, 0.2); // wrists on the bar
-const m = measurePullup(lms, 480, 640);
-const okMeasure = m.visible && m.hanging && (m.elbow ?? 0) > 150 && (m.chinMargin ?? 0) < 0 && pullupCalibrationHint(m) === 'hold';
-console.log(`${okMeasure ? 'PASS' : 'FAIL'}  pullup: measure dead hang: ${m.debug} → ${pullupCalibrationHint(m)}`);
-if (!okMeasure) failed = true;
+// ---------- measurePullup on synthetic landmarks (480x640 portrait frame) ----------
+type Pose = { face: number; shY: number; elY: number; elX: number; legs: number };
+function body({ face, shY, elY, elX, legs }: Pose) {
+  const lms = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.9, visibility: legs }));
+  const set = (i: number, x: number, y: number, vis = 0.95) => (lms[i] = { x, y, visibility: vis });
+  set(0, 0.5, shY - 0.08, face); // nose
+  set(9, 0.48, shY - 0.04, face);
+  set(10, 0.52, shY - 0.04, face); // mouth
+  set(7, 0.43, shY - 0.09, 0.6);
+  set(8, 0.57, shY - 0.09, 0.6); // ears
+  set(11, 0.4, shY);
+  set(12, 0.6, shY); // shoulders
+  set(13, 0.5 - elX, elY);
+  set(14, 0.5 + elX, elY); // elbows
+  set(15, 0.35, 0.2);
+  set(16, 0.65, 0.2); // wrists on the bar
+  return lms;
+}
+function check(name: string, ok: boolean, info: string) {
+  console.log(`${ok ? 'PASS' : 'FAIL'}  pullup: ${name}: ${info}`);
+  if (!ok) failed = true;
+}
+// dead hang: shoulders far below the wrists, straight arms
+const deadHang = { shY: 0.5, elY: 0.35, elX: 0.13 };
+// top: shoulders came up close to the bar, elbows bent out to the sides
+const top = { shY: 0.27, elY: 0.3, elX: 0.2 };
+
+const fh = measurePullup(body({ face: 0.95, legs: 0.9, ...deadHang }), 480, 640);
+check('front view, dead hang → ready', fh.visible && fh.hanging && fh.faceVisible && (fh.barScore ?? 0) < 0 && pullupCalibrationHint(fh) === 'hold', `${fh.debug} → ${pullupCalibrationHint(fh)}`);
+
+const bh = measurePullup(body({ face: 0.1, legs: 0.9, ...deadHang }), 480, 640);
+check('BACK view (face hidden), dead hang → ready', bh.visible && bh.hanging && !bh.faceVisible && pullupCalibrationHint(bh) === 'hold', `${bh.debug} → ${pullupCalibrationHint(bh)}`);
+
+const bt = measurePullup(body({ face: 0.1, legs: 0.9, ...top }), 480, 640);
+check('BACK view, top → at the bar', bt.visible && bt.hanging && (bt.barScore ?? -1) >= 0, bt.debug);
+
+const nf = measurePullup(body({ face: 0.1, legs: 0.0, ...deadHang }), 480, 640);
+check('feet/legs out of frame → still ready', nf.visible && pullupCalibrationHint(nf) === 'hold', `${nf.debug} → ${pullupCalibrationHint(nf)}`);
+
+const standing = measurePullup(body({ face: 0.95, legs: 0.9, shY: 0.5, elY: 0.65, elX: 0.12 }).map((p, i) => (i === 15 || i === 16 ? { ...p, y: 0.8 } : p)), 480, 640);
+check('standing with arms down → not hanging', !standing.hanging && pullupCalibrationHint(standing) === 'notHanging', standing.debug);
 
 if (failed) process.exitCode = 1;

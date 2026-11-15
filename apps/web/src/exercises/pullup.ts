@@ -1,13 +1,18 @@
-// Pull-up recognition (camera in front of the bar, low, looking up at the athlete).
+// Pull-up recognition. The camera stands low, in front of OR behind the athlete
+// (many bars are mounted so the face looks at a wall) — so the face is optional.
+// Only arms and shoulders must be visible; legs/feet may be out of frame.
 //
-// Per frame we measure:
-//   * elbow angle (average of both arms): ~170° hanging, small at the top
-//   * hanging: both wrists clearly above the head (= holding the bar)
-//   * chin margin: how far the chin is above the line of the wrists (= the bar),
-//     in shoulder widths, so it doesn't depend on distance to the camera
-// A rep counts at the TOP (chin reaches the bar), but only if the previous
-// bottom was a full hang with straight arms ("dead hang"). Thresholds are
-// starting values and will be tuned on real people.
+// Per frame we measure (all distances in shoulder widths, so the distance to
+// the camera doesn't matter):
+//   * elbow angle (average of both arms): ~170° in a dead hang, small at the top
+//   * hanging: both wrists clearly above the shoulders (= holding the bar)
+//   * "at the bar" score, from two independent signals:
+//       - chin vs the wrist line (only when the face is visible, front view)
+//       - how close the shoulders came up to the wrists (works from any side:
+//         with the chin at the bar the shoulders are almost at bar level)
+//     score ≥ 0 means "chin is at the bar"
+// A rep counts at the TOP, but only if the previous bottom was a full hang with
+// straight arms. Thresholds are starting values, tuned on real people.
 
 import { angle, toPx, type Pt } from '../pose/geometry.ts';
 import type { BaseFrame, Counter, ExerciseDef, Landmark, RepRecord, RepUpdate } from './types.ts';
@@ -17,33 +22,51 @@ export const PULLUP_RULES = {
   straightArms: 150,
   /** elbow angle below this = a real pull attempt started */
   pullStarted: 125,
-  /** chin may be this many shoulder-widths below the wrist line and still count as "over the bar" */
+  /** front view: chin may be this far below the wrist line and still count */
   chinTolerance: 0.12,
-  /** wrists must be this many shoulder-widths above the nose to count as hanging */
-  hangMargin: 0.1,
+  /** any view: at the top the shoulders are at most this far below the wrists (dead hang ≈ 1.4–1.7) */
+  shoulderTopLift: 0.55,
+  /** wrists must be at least this far above the shoulders to count as hanging on the bar.
+   *  Small on purpose: at the top of a rep the shoulders come up to ~0.3–0.5 below the bar. */
+  hangLift: 0.1,
+  /** "came clearly down from the bar" = score below this */
+  leftBarScore: -0.3,
   /** the pulling phase alone (leaving the dead hang → chin over bar) can't be faster than this */
   minRepMs: 300,
-  /** MediaPipe visibility needed for arms, shoulders and face */
+  /** MediaPipe visibility needed for shoulders, elbows and wrists */
   minVisibility: 0.5,
+  /** face (nose + mouth) counts as visible above this — otherwise we assume a back view */
+  faceVisibility: 0.6,
   /** smoothing for the elbow angle (0..1, higher = less smoothing) */
   emaAlpha: 0.45,
 } as const;
 
 // BlazePose landmark indices
-const I = { nose: 0, mouthL: 9, mouthR: 10, lSh: 11, rSh: 12, lEl: 13, rEl: 14, lWr: 15, rWr: 16 } as const;
+const I = { nose: 0, lEar: 7, rEar: 8, mouthL: 9, mouthR: 10, lSh: 11, rSh: 12, lEl: 13, rEl: 14, lWr: 15, rWr: 16 } as const;
 
 export interface PullupFrame extends BaseFrame {
-  /** both wrists above the head: holding the bar */
+  /** both wrists above the shoulders: holding the bar */
   hanging: boolean;
   /** average elbow angle of both arms */
   elbow: number | null;
-  /** chin height above the wrist line, in shoulder widths (positive = above the bar) */
-  chinMargin: number | null;
+  /** ≥ 0 when the chin is at/over the bar (see header comment) */
+  barScore: number | null;
+  /** the face is visible (front view); false = probably filmed from behind */
+  faceVisible: boolean;
 }
 
-const EMPTY: PullupFrame = { visible: false, hanging: false, elbow: null, chinMargin: null, points: null, lines: [], debug: '—' };
+const EMPTY: PullupFrame = {
+  visible: false,
+  hanging: false,
+  elbow: null,
+  barScore: null,
+  faceVisible: false,
+  points: null,
+  lines: [],
+  debug: '—',
+};
 
-// points: [lSh, lEl, lWr, rSh, rEl, rWr, chin]
+// points: [lSh, lEl, lWr, rSh, rEl, rWr, head]
 const PULLUP_LINES: Array<[number, number]> = [
   [0, 1],
   [1, 2],
@@ -53,30 +76,55 @@ const PULLUP_LINES: Array<[number, number]> = [
   [0, 3],
 ];
 
+const signed = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
+
 export function measurePullup(lms: Landmark[] | undefined, width: number, height: number): PullupFrame {
   if (!lms || lms.length < 17) return EMPTY;
+  const R = PULLUP_RULES;
   const P = (i: number): Pt => toPx(lms[i], width, height);
-  const vis = Math.min(...[I.nose, I.lSh, I.rSh, I.lEl, I.rEl, I.lWr, I.rWr].map((i) => lms[i].visibility ?? 0));
+  const v = (i: number) => lms[i].visibility ?? 0;
 
-  const [nose, mL, mR, lSh, rSh, lEl, rEl, lWr, rWr] = [I.nose, I.mouthL, I.mouthR, I.lSh, I.rSh, I.lEl, I.rEl, I.lWr, I.rWr].map(P);
+  // Only arms + shoulders are required. Head and legs are optional.
+  const armsVis = Math.min(...[I.lSh, I.rSh, I.lEl, I.rEl, I.lWr, I.rWr].map(v));
+  const faceVisible = Math.min(v(I.nose), v(I.mouthL), v(I.mouthR)) >= R.faceVisibility;
+
+  const [lSh, rSh, lEl, rEl, lWr, rWr] = [I.lSh, I.rSh, I.lEl, I.rEl, I.lWr, I.rWr].map(P);
   const shoulderW = Math.max(1, Math.hypot(lSh.x - rSh.x, lSh.y - rSh.y));
-  const mouth = { x: (mL.x + mR.x) / 2, y: (mL.y + mR.y) / 2 };
-  // the chin sits roughly one nose-to-mouth distance below the mouth
-  const chin = { x: mouth.x, y: mouth.y + (mouth.y - nose.y) * 0.9 };
+  const shoulderY = (lSh.y + rSh.y) / 2;
   const wristY = (lWr.y + rWr.y) / 2;
   const elbow = (angle(lSh, lEl, lWr) + angle(rSh, rEl, rWr)) / 2;
+
   // screen y grows downwards, so "above" means a smaller y
-  const hanging = wristY < nose.y - PULLUP_RULES.hangMargin * shoulderW;
-  const chinMargin = (wristY - chin.y) / shoulderW;
+  const hanging = wristY < shoulderY - R.hangLift * shoulderW;
+
+  // signal 1 (any view): shoulders rose close to the bar
+  const shoulderLift = (shoulderY - wristY) / shoulderW;
+  const shoulderScore = R.shoulderTopLift - shoulderLift;
+
+  // signal 2 (front view only): chin at the wrist line
+  let head: Pt;
+  let chinScore = -Infinity;
+  if (faceVisible) {
+    const nose = P(I.nose);
+    const mouth = { x: (P(I.mouthL).x + P(I.mouthR).x) / 2, y: (P(I.mouthL).y + P(I.mouthR).y) / 2 };
+    // the chin sits roughly one nose-to-mouth distance below the mouth
+    head = { x: mouth.x, y: mouth.y + (mouth.y - nose.y) * 0.9 };
+    chinScore = (wristY - head.y) / shoulderW + R.chinTolerance;
+  } else {
+    // back of the head: between the ears (or above the shoulders if ears are hidden)
+    head = v(I.lEar) > 0.3 && v(I.rEar) > 0.3 ? { x: (P(I.lEar).x + P(I.rEar).x) / 2, y: (P(I.lEar).y + P(I.rEar).y) / 2 } : { x: (lSh.x + rSh.x) / 2, y: shoulderY - 0.6 * shoulderW };
+  }
+  const barScore = Math.max(chinScore, shoulderScore);
 
   return {
-    visible: vis >= PULLUP_RULES.minVisibility,
+    visible: armsVis >= R.minVisibility,
     hanging,
     elbow,
-    chinMargin,
-    points: [lSh, lEl, lWr, rSh, rEl, rWr, chin],
+    barScore,
+    faceVisible,
+    points: [lSh, lEl, lWr, rSh, rEl, rWr, head],
     lines: PULLUP_LINES,
-    debug: `elbow ${Math.round(elbow)}° · chin ${chinMargin >= 0 ? '+' : ''}${chinMargin.toFixed(2)} · ${hanging ? 'hang' : 'off bar'}`,
+    debug: `elbow ${Math.round(elbow)}° · bar ${signed(barScore)} · ${faceVisible ? 'face' : 'back'} · ${hanging ? 'hang' : 'off bar'}`,
   };
 }
 
@@ -108,7 +156,7 @@ export class PullupCounter implements Counter<PullupFrame> {
 
   update(f: PullupFrame, t: number): RepUpdate {
     const R = PULLUP_RULES;
-    if (!f.visible || f.elbow == null || f.chinMargin == null) return { counted: false, hint: 'lost' };
+    if (!f.visible || f.elbow == null || f.barScore == null) return { counted: false, hint: 'lost' };
     // Off the bar: nothing to count (the screen ends the set if this lasts).
     if (!f.hanging) return { counted: false, hint: null };
 
@@ -134,9 +182,9 @@ export class PullupCounter implements Counter<PullupFrame> {
 
     // Came clearly down from the bar (but arms not straight yet): the next
     // chin-over is a new attempt — useful to say "straighten your arms".
-    if (this.atTop && f.chinMargin < -R.chinTolerance - 0.3) this.atTop = false;
+    if (this.atTop && f.barScore < R.leftBarScore) this.atTop = false;
 
-    if (!this.atTop && f.chinMargin >= -R.chinTolerance) {
+    if (!this.atTop && f.barScore >= 0) {
       this.atTop = true;
       this.topReached = true;
       // started this pull without a full hang (half rep from the middle)
@@ -149,7 +197,8 @@ export class PullupCounter implements Counter<PullupFrame> {
         tMs: t,
         durationMs: Math.round(duration),
         minElbow: Math.round(this.minElbow),
-        chinMargin: Math.round(f.chinMargin * 100) / 100,
+        barScore: Math.round(f.barScore * 100) / 100,
+        faceVisible: f.faceVisible ? 1 : 0,
       });
       return { counted: true, hint: null };
     }
