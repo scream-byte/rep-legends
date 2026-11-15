@@ -5,7 +5,7 @@
 
 **Сейчас мы здесь:** ✅ этап 0 готов. ⏳ **Этап 1 — счётчик отжиманий** выложен на сайт и ждёт вашей проверки на iPhone и Android (чек-лист этапа 1 ниже).
 
-Сайт игры: https://silindanniil-byte.github.io/rep-legends/
+Сайт игры: https://scream-byte.github.io/rep-legends/
 
 > **Шаг 4 в новом BotFather:** в окне настроек бота → **Mini Apps** → **Main App** (включить, вставить адрес сайта) и **Menu Button** (включить, тот же адрес, текст `Играть`). Переключатель **Same-Origin Restriction** оставить включённым.
 
@@ -67,7 +67,7 @@ npm -v
 5. Нажмите **Create repository**.
 6. В новом хранилище откройте **Settings** (вкладка с шестерёнкой) → слева **Pages** → в поле **Source** выберите **GitHub Actions**.
 
-Ваш адрес игры: **https://silindanniil-byte.github.io/rep-legends/**
+Ваш адрес игры: **https://scream-byte.github.io/rep-legends/**
 
 ### Шаг 2в. Отправить код на GitHub
 

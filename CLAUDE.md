@@ -50,9 +50,10 @@
 
 ## 5. Адреса и окружение
 
-- Сайт игры: **https://silindanniil-byte.github.io/rep-legends/**
-- Репозиторий: https://github.com/silindanniil-byte/rep-legends (публичный; GitHub Pages Source = GitHub Actions)
-- Windows 11, Git 2.56, Node v26.13.1, npm 11.20. Git-автор в репо: `silindanniil-byte` (noreply email).
+- Сайт игры: **https://scream-byte.github.io/rep-legends/**
+- Репозиторий: https://github.com/scream-byte/rep-legends (публичный; GitHub Pages Source = GitHub Actions)
+- GitHub-аккаунт пользователя: **`scream-byte`** (до 2026-11-15 назывался `silindanniil-byte`; старые ссылки `silindanniil-byte.github.io` больше **не работают**, GitHub Pages не перенаправляет).
+- Windows 11, Git 2.56, Node v26.13.1, npm 11.20. Git-автор в репо: `scream-byte` (noreply email `<id>+scream-byte@users.noreply.github.com`).
 - `git push` из сессии Claude работает (Git Credential Manager запомнил вход).
 - Коммиты делать через `git commit -m "заголовок" -m "текст" -m "Co-Authored-By: ..."` и **не прятать вывод** (`| Out-Null`): однажды here-string + перенаправление в PowerShell молча не создали коммит. После push сверять SHA сборки в Actions с `git rev-parse HEAD`.
 - В PowerShell-сессии Claude PATH к Node может не подхватиться — в начале команды:
@@ -67,7 +68,7 @@ npm run build      # проверка типов + сборка в apps/web/dist
 npm test           # синтетические тесты счётчика отжиманий (16 шт., должны быть все PASS)
 git add . ; git commit -m "..." ; git push   # выкладка → GitHub Actions → сайт через 1–2 мин
 ```
-Проверка деплоя: `https://api.github.com/repos/silindanniil-byte/rep-legends/actions/runs?per_page=1` → `completed / success`.
+Проверка деплоя: `https://api.github.com/repos/scream-byte/rep-legends/actions/runs?per_page=1` → `completed / success`.
 
 Визуальная проверка без телефона: `vite preview --port 4179` + Edge headless; для узких экранов — HTML-обёртка с `<iframe width=360 height=640>` (Edge не умеет окно уже ~500 px). Для сценария с камерой — Edge `--remote-debugging-port --use-fake-ui-for-media-stream --use-fake-device-for-media-stream` + скрипт на CDP (Node 26 имеет встроенный WebSocket).
 
@@ -136,3 +137,4 @@ apps/web/
 - 2026-11-14 — Настройки переделаны (язык, 3 громкости, яркость, меньше анимаций, вибрация, сброс; сохраняются). Добавлены своя синтезированная музыка меню и звуковые эффекты (в т.ч. в тренировке). Проверено в Edge: звук стартует после касания, настройки применяются и переживают перезагрузку, ошибок нет.
 - 2026-11-15 — Баг: музыка включалась только при открытии настроек (ждала первого касания). Исправлено: попытка автозапуска при открытии, разблокировка по touchend/click/pointerdown/keydown + беззвучный сэмпл, очередь запуска сбрасывается только когда звук реально работает (`statechange`), подсказка «🔊 Включить музыку» пока звук заблокирован. Проверено в Edge: разрешающий режим — играет сразу; эмуляция iOS — кнопка видна, касание по герою включает музыку.
 - 2026-11-15 — Кнопка включения музыки закрывала «В бой!» → сделана маленькой круглой (50 px), только значок 🔊, мигает значок; стоит у правого края над «Арены».
+- 2026-11-15 — По просьбе пользователя аккаунт GitHub переименован `silindanniil-byte` → `scream-byte`. Новый адрес сайта: https://scream-byte.github.io/rep-legends/. Обновлены git remote, автор коммитов, все документы. Пользователь должен обновить URL в @BotFather (Main App + Menu Button).
