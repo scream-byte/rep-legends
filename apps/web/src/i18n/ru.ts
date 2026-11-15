@@ -5,6 +5,7 @@ export const ru = {
   play: 'В бой!',
   arenas: 'Арены',
   comingSoon: 'Скоро!',
+  enableSound: 'Включить музыку',
   rank: 'Ранг',
   levelShort: 'УР.',
   stats: {

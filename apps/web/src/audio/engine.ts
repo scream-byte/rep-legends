@@ -48,7 +48,7 @@ function ensureContext(): AudioContext | null {
   return ctx;
 }
 
-/** True once the browser allowed audio (after the first tap). */
+/** True once the browser allowed audio. */
 export function isUnlocked(): boolean {
   return ctx?.state === 'running';
 }
@@ -59,29 +59,65 @@ export function onUnlock(cb: () => void): void {
   else unlockListeners.push(cb);
 }
 
-function unlock() {
-  const c = ensureContext();
-  if (!c) return;
-  c.resume()
-    .then(() => {
-      while (unlockListeners.length) unlockListeners.shift()!();
-    })
-    .catch(() => {});
+// Flush waiting callbacks only when the context is REALLY running
+// (some webviews resolve resume() but stay suspended).
+function flushIfRunning() {
+  if (!isUnlocked()) return;
+  while (unlockListeners.length) unlockListeners.shift()!();
+  stateSubscribers.forEach((fn) => fn(true));
 }
 
-/** Call once at startup: listens for the first tap and pauses audio in the background. */
+const stateSubscribers = new Set<(unlocked: boolean) => void>();
+/** Subscribe to "audio allowed" changes (for the "tap to enable sound" hint). */
+export function subscribeUnlocked(fn: (unlocked: boolean) => void): () => void {
+  stateSubscribers.add(fn);
+  return () => stateSubscribers.delete(fn);
+}
+
+function tryResume() {
+  const c = ensureContext();
+  if (!c) return;
+  if (c.state === 'running') return flushIfRunning();
+  c.resume().then(flushIfRunning, () => {});
+}
+
+/** Inside a real tap: resume + play one silent sample (the classic iOS unlock). */
+function unlockFromGesture() {
+  const c = ensureContext();
+  if (!c) return;
+  try {
+    const src = c.createBufferSource();
+    src.buffer = c.createBuffer(1, 1, c.sampleRate);
+    src.connect(c.destination);
+    src.start(0);
+  } catch {
+    /* ignore */
+  }
+  tryResume();
+}
+
+/**
+ * Call once at startup. Tries to start audio right away (some Telegram webviews
+ * allow it); otherwise unlocks on the first tap anywhere. Pauses in the background.
+ */
 export function initAudio(): void {
-  const events = ['pointerdown', 'touchend', 'keydown'] as const;
+  // 1) Optimistic start without a tap.
+  tryResume();
+  ctx?.addEventListener('statechange', flushIfRunning);
+
+  // 2) Fallback: the first real gesture. WebKit counts touchend/click as gestures,
+  //    Chrome also pointerdown/keydown — listen to all of them.
+  const events = ['pointerdown', 'touchend', 'click', 'keydown'] as const;
   const handler = () => {
-    unlock();
-    if (isUnlocked()) events.forEach((e) => window.removeEventListener(e, handler));
+    unlockFromGesture();
+    if (isUnlocked()) events.forEach((e) => window.removeEventListener(e, handler, true));
   };
-  events.forEach((e) => window.addEventListener(e, handler, { passive: true }));
+  events.forEach((e) => window.addEventListener(e, handler, { capture: true, passive: true }));
 
   document.addEventListener('visibilitychange', () => {
     if (!ctx) return;
     if (document.hidden) ctx.suspend().catch(() => {});
-    else ctx.resume().catch(() => {});
+    else if (unlockListeners.length === 0) ctx.resume().catch(() => {});
   });
 }
 

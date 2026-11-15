@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isUnlocked, subscribeUnlocked } from '../audio/engine';
 import { sfx } from '../audio/sfx';
 import type { Dict } from '../i18n';
 import type { Settings } from '../settings';
@@ -34,7 +35,14 @@ interface Props {
 export function Home({ t, settings, update, reset, onPlay }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [soundOn, setSoundOn] = useState(isUnlocked);
   const name = getUser()?.first_name ?? t.guest;
+
+  // Browsers block sound until the first tap: show a hint until audio is allowed.
+  useEffect(() => {
+    setSoundOn(isUnlocked());
+    return subscribeUnlocked(setSoundOn);
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -117,6 +125,12 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
 
         <div className="hero-box">
           <Hero className="hero" />
+          {!soundOn && (
+            // Any tap unlocks audio (handled globally); this button just invites one.
+            <button className="sound-hint" onClick={() => haptic('light')}>
+              🔊 {t.enableSound}
+            </button>
+          )}
         </div>
       </section>
 

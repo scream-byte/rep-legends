@@ -7,6 +7,7 @@ export const en: typeof ru = {
   play: 'Fight!',
   arenas: 'Arenas',
   comingSoon: 'Soon!',
+  enableSound: 'Turn on music',
   rank: 'Rank',
   levelShort: 'LVL',
   stats: {
