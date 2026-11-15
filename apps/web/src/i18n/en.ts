@@ -117,13 +117,50 @@ export const en: typeof ru = {
         extend: 'Straighten your arms at the bottom!',
         fast: 'Too fast!',
         lost: "Can't see you",
+        kipHalf: 'Kipping — ½ point',
+        kipZero: "No kipping! Doesn't count",
       } as Record<string, string>,
     },
     squat: { name: 'Squats' },
     abs: { name: 'Abs' },
   },
 
+  pullupDifficulty: {
+    subtitle: 'Choose a difficulty',
+    easy: {
+      name: 'Easy',
+      who: 'For beginners',
+      rules: [
+        'Every pull-up = 1 point',
+        'Band and kipping are fine',
+        "Arms don't have to be fully straight at the bottom",
+        'Chin up to the bar',
+      ],
+    },
+    medium: {
+      name: 'Medium',
+      who: 'For those who can already do pull-ups',
+      rules: ['A clean pull-up = 1 point', 'With kipping or a band = ½ point', 'Arms almost straight at the bottom', 'Chin up to the bar'],
+    },
+    hard: {
+      name: 'Hard',
+      who: 'For real athletes',
+      rules: ['Strict form only = 1 point', 'Kipping = 0, no band allowed', 'Dead hang: arms fully straight at the bottom', 'Chin over the bar'],
+    },
+    band: 'I use a resistance band',
+    bandNote: "The camera can't see a band — be honest",
+    bandHard: 'No band on the hard level',
+    bandShort: 'with band',
+    start: 'Start',
+  },
+
   workout: {
+    points: 'points',
+    breakdown: {
+      clean: 'Clean',
+      kipping: 'With kipping',
+      band: 'With band',
+    },
     setupTitle: 'How to place your phone',
     startCamera: 'Turn on camera',
     loadingModel: 'Starting camera and pose detection…',

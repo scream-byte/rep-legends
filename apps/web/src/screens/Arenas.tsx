@@ -47,7 +47,9 @@ export function Arenas({ t, onPick, onBack }: Props) {
 
       <ul className="arena-list">
         {ARENAS.map((a) => {
-          const best = Number(load(keys.best(a.id)) ?? 0) || 0;
+          // pull-up records are kept per difficulty: show the best of them
+          const ids = a.id === 'pullup' ? ['pullup.easy', 'pullup.medium', 'pullup.hard'] : [a.id];
+          const best = Math.max(0, ...ids.map((id) => Number(load(keys.best(id)) ?? 0) || 0));
           return (
             <li key={a.id}>
               <button

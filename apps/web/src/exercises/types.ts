@@ -36,19 +36,37 @@ export interface RepRecord {
 
 export interface RepUpdate {
   counted: boolean;
-  /** key of a hint to show (looked up in the exercise's i18n `hints`), e.g. 'lower' */
+  /** key of a hint to show (looked up in the exercise's i18n `hints`), e.g. 'lower'.
+   *  May also come with counted=true (e.g. "kipping: half a point"). */
   hint: string | null;
 }
 
+/** How many reps of each kind made up the score (for the result screen). */
+export interface Breakdown {
+  clean: number;
+  kipping: number;
+  band: number;
+}
+
 export interface Counter<F extends BaseFrame> {
+  /** the score: usually whole reps, but can be fractional (0.5 for kipping on medium) */
   reps: number;
   readonly log: RepRecord[];
+  /** optional per-kind counts shown on the result screen */
+  readonly breakdown?: Breakdown;
   update(f: F, t: number): RepUpdate;
+}
+
+/** 3D landmarks in metres around the hips (MediaPipe `worldLandmarks`), used for depth. */
+export interface WorldLandmark {
+  x: number;
+  y: number;
+  z: number;
 }
 
 export interface ExerciseDef<F extends BaseFrame = BaseFrame> {
   id: ExerciseId;
-  measure(lms: Landmark[] | undefined, width: number, height: number): F;
+  measure(lms: Landmark[] | undefined, width: number, height: number, world?: WorldLandmark[]): F;
   /** what the player must fix before starting; 'hold' means "ready" */
   calibrationHint(f: F): string;
   createCounter(): Counter<F>;

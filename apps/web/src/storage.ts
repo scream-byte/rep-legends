@@ -23,5 +23,7 @@ export const keys = {
   warmupAck: 'warmupAck',
   /** personal record per exercise, e.g. best('pullup') → 'best.pullup' */
   best: (exercise: string) => `best.${exercise}`,
+  /** last chosen pull-up difficulty + band toggle, JSON */
+  pullupOptions: 'pullup.options',
   settings: 'settings',
 } as const;

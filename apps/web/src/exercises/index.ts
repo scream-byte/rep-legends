@@ -1,12 +1,23 @@
 // Registry of playable exercises (each one is an arena).
-import { pullupExercise } from './pullup.ts';
+import { makePullupExercise, type PullupOptions } from './pullup.ts';
 import { pushupExercise } from './pushup.ts';
 import type { ArenaId, BaseFrame, ExerciseDef, ExerciseId } from './types.ts';
 
-export const EXERCISES: Record<ExerciseId, ExerciseDef<BaseFrame>> = {
-  pushup: pushupExercise as unknown as ExerciseDef<BaseFrame>,
-  pullup: pullupExercise as unknown as ExerciseDef<BaseFrame>,
-};
+/** Extra choices made before a set (only pull-ups have them for now). */
+export interface ExerciseVariant {
+  pullup?: PullupOptions;
+}
+
+/** Builds the exercise definition for a set, applying the chosen variant. */
+export function getExercise(id: ExerciseId, variant: ExerciseVariant = {}): ExerciseDef<BaseFrame> {
+  const def = id === 'pullup' ? makePullupExercise(variant.pullup) : pushupExercise;
+  return def as unknown as ExerciseDef<BaseFrame>;
+}
+
+/** Storage key suffix for records: pull-up records are kept per difficulty. */
+export function recordId(id: ExerciseId, variant: ExerciseVariant = {}): string {
+  return id === 'pullup' && variant.pullup ? `pullup.${variant.pullup.difficulty}` : id;
+}
 
 /** Arena order on the arena screen; locked ones are shown as "coming soon". */
 export const ARENAS: Array<{ id: ArenaId; stat: 'attack' | 'strength' | 'endurance' | 'defense'; playable: boolean }> = [
@@ -17,3 +28,4 @@ export const ARENAS: Array<{ id: ArenaId; stat: 'attack' | 'strength' | 'enduran
 ];
 
 export type { ArenaId, ExerciseId } from './types.ts';
+export type { PullupDifficulty, PullupOptions } from './pullup.ts';

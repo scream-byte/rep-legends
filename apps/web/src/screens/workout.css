@@ -246,7 +246,22 @@
 }
 
 /* ---------- debug ---------- */
+.result-breakdown {
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+
 .debug-info {
+  white-space: pre-line; /* the debug line may have two rows */
   position: absolute;
   left: 8px;
   bottom: calc(80px + env(safe-area-inset-bottom, 0px));

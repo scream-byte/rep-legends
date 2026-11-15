@@ -1,8 +1,8 @@
-import { PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision';
+import { PoseLandmarker, type Landmark, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sfx } from '../audio/sfx';
-import { EXERCISES, type ExerciseId } from '../exercises';
-import type { BaseFrame, Counter } from '../exercises/types';
+import { getExercise, recordId, type ExerciseId, type ExerciseVariant } from '../exercises';
+import type { BaseFrame, Breakdown, Counter } from '../exercises/types';
 import type { Dict } from '../i18n';
 import { CameraError, keepScreenOn, startCamera, stopStream, type Facing } from '../pose/camera';
 import { loadPoseLandmarker, type LoadedLandmarker } from '../pose/landmarker';
@@ -16,6 +16,8 @@ type Phase = 'setup' | 'loading' | 'calibrating' | 'countdown' | 'active' | 'res
 interface Props {
   t: Dict;
   exercise: ExerciseId;
+  /** choices made before the set, e.g. pull-up difficulty */
+  variant?: ExerciseVariant;
   /** Telegram back arrow / "to arenas" */
   onBack: () => void;
   /** "Home" button on the result screen */
@@ -27,6 +29,7 @@ interface Result {
   ms: number;
   best: number;
   newBest: boolean;
+  breakdown?: Breakdown;
 }
 
 function formatTime(ms: number): string {
@@ -34,10 +37,15 @@ function formatTime(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** Scores can be fractional (½ point for kipping on medium): show "7" or "7.5". */
+const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
 /** One camera workout screen for every exercise (see src/exercises/types.ts). */
-export function Workout({ t, exercise, onBack, onHome }: Props) {
-  const def = EXERCISES[exercise];
+export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
+  const def = useMemo(() => getExercise(exercise, variant), [exercise, variant]);
+  const recordKey = keys.best(recordId(exercise, variant));
   const text = t.exercises[exercise];
+  const difficulty = variant.pullup?.difficulty;
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -207,6 +215,8 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
       setReps(counterRef.current.reps);
       haptic('medium');
       sfx.rep();
+      // e.g. "kipping — ½ point": counted, but worth telling the player
+      if (u.hint) setHint({ key: u.hint, id: now });
     } else if (u.hint && !isLost) {
       setHint({ key: u.hint, id: now });
       hapticNotify('warning');
@@ -274,8 +284,12 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
       lastTs = now;
 
       let lms: NormalizedLandmark[] | undefined;
+      let world: Landmark[] | undefined;
       try {
-        lms = L.landmarker.detectForVideo(video, now).landmarks[0];
+        const res = L.landmarker.detectForVideo(video, now);
+        lms = res.landmarks[0];
+        world = res.worldLandmarks[0]; // 3D, used e.g. to spot kipping
+
       } catch (err) {
         // Some phones accept the GPU at startup but fail later: switch to the CPU once.
         if (L.delegate === 'GPU' && !switchingDelegateRef.current) {
@@ -290,7 +304,7 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
         return;
       }
 
-      const f = def.measure(lms, video.videoWidth, video.videoHeight);
+      const f = def.measure(lms, video.videoWidth, video.videoHeight, world);
       lastLine = f.debug;
       handleFrame(f, now);
       if (debugRef.current) drawDebug(lms, f);
@@ -356,11 +370,12 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
     if (phaseRef.current !== 'active') return;
     const ms = performance.now() - startedAtRef.current;
     const count = counterRef.current.reps;
-    const prev = Number(load(keys.best(exercise)) ?? 0) || 0;
+    const prev = Number(load(recordKey) ?? 0) || 0;
     const newBest = count > prev;
-    if (newBest) save(keys.best(exercise), String(count));
+    if (newBest) save(recordKey, String(count));
     stopAll();
-    setResult({ reps: count, ms, best: Math.max(prev, count), newBest });
+    const b = counterRef.current.breakdown;
+    setResult({ reps: count, ms, best: Math.max(prev, count), newBest, breakdown: b ? { ...b } : undefined });
     setPhase('result');
     hapticNotify('success');
     sfx.finish();
@@ -369,6 +384,14 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
   // ---------- render ----------
 
   const hintText = useMemo(() => (key: string) => text.hints[key] ?? key, [text]);
+  // "Pull-ups · Medium · with band"
+  const kicker = [
+    text.name,
+    difficulty && t.pullupDifficulty[difficulty].name,
+    variant.pullup?.band && t.pullupDifficulty.bandShort,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const cameraOn = phase === 'calibrating' || phase === 'countdown' || phase === 'active';
   const mirror = facing === 'user' ? 'mirror' : '';
 
@@ -382,7 +405,7 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
       {phase === 'setup' && (
         <div className="w-panel-wrap">
           <div className="panel">
-            <p className="panel-kicker">{text.name}</p>
+            <p className="panel-kicker">{kicker}</p>
             <h2 className="outlined">{t.workout.setupTitle}</h2>
             <SetupArt exercise={exercise} />
             <ol className="panel-list">
@@ -446,7 +469,7 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
           <div className="w-top">
             <div className="rep-counter">
               <b key={reps} className="outlined">
-                {reps}
+                {formatScore(reps)}
               </b>
               <span className="outlined">{t.workout.reps}</span>
             </div>
@@ -476,11 +499,28 @@ export function Workout({ t, exercise, onBack, onHome }: Props) {
       {phase === 'result' && result && (
         <div className="w-panel-wrap">
           <div className="panel">
-            <p className="panel-kicker">{text.name}</p>
+            <p className="panel-kicker">{kicker}</p>
             <h2 className="outlined">{t.workout.resultTitle}</h2>
-            <div className="result-reps outlined">{result.reps}</div>
-            <p className="result-label">{t.workout.reps}</p>
+            <div className="result-reps outlined">{formatScore(result.reps)}</div>
+            <p className="result-label">{difficulty ? t.workout.points : t.workout.reps}</p>
             {result.newBest && result.reps > 0 && <p className="new-best outlined">🏆 {t.workout.newBest}</p>}
+            {result.breakdown && (result.breakdown.kipping > 0 || result.breakdown.band > 0) && (
+              <ul className="result-breakdown">
+                <li>
+                  ✅ {t.workout.breakdown.clean}: <b>{result.breakdown.clean}</b>
+                </li>
+                {result.breakdown.kipping > 0 && (
+                  <li>
+                    🔄 {t.workout.breakdown.kipping}: <b>{result.breakdown.kipping}</b>
+                  </li>
+                )}
+                {result.breakdown.band > 0 && (
+                  <li>
+                    🟣 {t.workout.breakdown.band}: <b>{result.breakdown.band}</b>
+                  </li>
+                )}
+              </ul>
+            )}
             <div className="result-row">
               <span>
                 {t.workout.time}: <b>{formatTime(result.ms)}</b>
