@@ -546,26 +546,37 @@ button {
 }
 
 /* ---------- "tap to enable sound" hint on the home screen ---------- */
+/* Small round icon-only button at the right edge; only the icon pulses */
 .sound-hint {
   position: absolute;
-  left: 50%;
-  bottom: 4px;
+  right: 0;
+  bottom: 6px;
   z-index: 2;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 8px 16px;
-  font-size: 15px;
-  color: var(--ink);
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  line-height: 1;
   background: linear-gradient(var(--yellow-1), var(--yellow-2));
   border: 3px solid var(--ink);
-  border-radius: 20px;
+  border-radius: 50%;
   box-shadow: 0 4px 0 var(--ink);
-  animation: hint-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes hint-pulse {
+.sound-hint:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.sound-hint span {
+  animation: hint-blink 1s ease-in-out infinite;
+}
+
+@keyframes hint-blink {
   50% {
-    transform: translateX(-50%) scale(1.07);
+    opacity: 0.25;
+    transform: scale(0.85);
   }
 }
 

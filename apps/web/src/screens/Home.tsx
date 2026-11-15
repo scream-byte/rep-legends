@@ -127,8 +127,8 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
           <Hero className="hero" />
           {!soundOn && (
             // Any tap unlocks audio (handled globally); this button just invites one.
-            <button className="sound-hint" onClick={() => haptic('light')}>
-              🔊 {t.enableSound}
+            <button className="sound-hint" aria-label={t.enableSound} title={t.enableSound} onClick={() => haptic('light')}>
+              <span aria-hidden>🔊</span>
             </button>
           )}
         </div>
