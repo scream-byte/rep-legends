@@ -151,6 +151,9 @@ export function SettingsModal({ t, settings: s, update, reset, onClose }: Props)
             <li>
               {t.version}: {getTgVersion()}
             </li>
+            <li>
+              {t.gameVersion}: {__BUILD_TIME__} UTC
+            </li>
           </ul>
         </details>
 

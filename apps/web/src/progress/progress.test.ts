@@ -27,16 +27,18 @@ const PHONE = 'phoneaaa111';
 const TABLET = 'tabletbbb22';
 
 // ---------- levels ----------
-check('stat level 1 at 0 XP', statLevel(0).level === 1 && statLevel(0).need === 20);
-check('stat level 2 at 20 XP', statLevel(20).level === 2 && statLevel(20).into === 0 && statLevel(20).need === 30);
-check('stat level 3 at 50 XP (20+30)', statLevel(50).level === 3);
-check('stat level percent', statLevel(10).percent === 50);
+check('stat level 1 at 0 XP, 10 XP to level 2', statLevel(0).level === 1 && statLevel(0).need === 10);
+check('stat level 2 at 10 XP, then 15 more', statLevel(10).level === 2 && statLevel(10).into === 0 && statLevel(10).need === 15);
+check('stat level 3 at 25 XP (10+15), then 20 more', statLevel(25).level === 3 && statLevel(25).need === 20);
+check('stat level 4 at 45 XP (10+15+20)', statLevel(45).level === 4);
+check('stat level percent', statLevel(5).percent === 50);
+check('hero: 25 XP to level 2, then 35', heroLevel({ ...emptyProgress(), dev: { phoneaaa111: { ...applySet(emptyProgress(), { exercise: 'pushup', score: 25, recordKey: 'pushup' }, 'phoneaaa111').progress.dev.phoneaaa111 } } }).level === 2);
 check('negative / huge XP is safe', statLevel(-5).level === 1 && statLevel(1e9).level <= 999);
 
 // ---------- XP from sets ----------
 let p = emptyProgress();
 const s1 = applySet(p, { exercise: 'pushup', score: 25, recordKey: 'pushup', now: 1 }, PHONE);
-check('25 push-ups → +25 Attack XP, Attack level 2', s1.xpGained === 25 && s1.stat === 'attack' && s1.statLevelBefore === 1 && s1.statLevelAfter === 2);
+check('25 push-ups → +25 Attack XP, Attack level 3', s1.xpGained === 25 && s1.stat === 'attack' && s1.statLevelBefore === 1 && s1.statLevelAfter === 3);
 check('first set is a new record', s1.newRecord && s1.progress.records.pushup === 25);
 check('input progress is not mutated', Object.keys(p.dev).length === 0 && !p.records.pushup);
 p = s1.progress;
@@ -53,7 +55,7 @@ const t5 = totals(s5.progress);
 check('totals', t5.pushupReps === 35 && t5.pullupPoints === 16.5 && t5.sets === 5);
 const s0 = applySet(s5.progress, { exercise: 'pushup', score: 0, recordKey: 'pushup', now: 6 }, PHONE);
 check('empty set (0 reps): no XP, not counted as a set', s0.xpGained === 0 && totals(s0.progress).sets === 5 && !s0.newRecord);
-check('hero level grows from all XP', heroLevel(s5.progress).level === 2);
+check('hero level grows from all XP (85.5 XP → level 3)', heroLevel(s5.progress).level === 3);
 
 // ---------- saves can never lose data ----------
 const phone: Progress = s5.progress;
@@ -108,5 +110,17 @@ store['best.pullup.medium'] = '15';
 store['best.pullup.hard'] = '4';
 const legacy2 = fromLegacyRecords((k) => store[k] ?? null);
 check('newer per-difficulty record wins over the old one', legacy2.records['pullup.medium'] === 15 && legacy2.records['pullup.hard'] === 4);
+
+// ---------- one-time XP credit for old records (user had record 6 but no XP) ----------
+const oldOnly = fromLegacyRecords((k) => ({ 'best.pullup.medium': '6' })[k] ?? null);
+check('old record 6 medium pull-ups → +18 Strength XP', statXp(oldOnly, 'strength') === 18, `got ${statXp(oldOnly, 'strength')}`);
+const credit = fromLegacyRecords((k) => store[k] ?? null); // pushup 23, medium 15, hard 4
+check('credit for all old records (23 push-ups; 15×3 + 4×4 strength)', statXp(credit, 'attack') === 23 && statXp(credit, 'strength') === 61);
+const onPhone1 = merge(applySet(emptyProgress(), { exercise: 'pushup', score: 10, recordKey: 'pushup' }, PHONE).progress, credit);
+const restartedTwice = merge(merge(onPhone1, fromLegacyRecords((k) => store[k] ?? null)), fromLegacyRecords((k) => store[k] ?? null));
+check('credit is NOT added again on restarts', statXp(restartedTwice, 'attack') === 33, `got ${statXp(restartedTwice, 'attack')}`);
+const secondPhone = merge(fromLegacyRecords((k) => store[k] ?? null), emptyProgress());
+check('credit is NOT doubled when another phone syncs the same old records', statXp(merge(restartedTwice, secondPhone), 'attack') === 33);
+check('no old records → no credit', Object.keys(fromLegacyRecords(() => null).dev).length === 0);
 
 if (failed) process.exitCode = 1;

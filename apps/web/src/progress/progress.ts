@@ -126,10 +126,10 @@ export function totals(p: Progress): Counters {
 
 // ---------- levels ----------
 
-/** XP needed to go from stat level L to L+1: 20, 30, 40, … */
-export const statXpToNext = (level: number) => 20 + 10 * (level - 1);
-/** XP needed to go from hero level L to L+1: 50, 75, 100, … */
-export const heroXpToNext = (level: number) => 50 + 25 * (level - 1);
+/** XP needed to go from stat level L to L+1: 10, 15, 20, 25, … (user's choice 2026-11-15) */
+export const statXpToNext = (level: number) => 10 + 5 * (level - 1);
+/** XP needed to go from hero level L to L+1: 25, 35, 45, … (sum of all stats) */
+export const heroXpToNext = (level: number) => 25 + 10 * (level - 1);
 
 export interface LevelInfo {
   level: number;
@@ -239,10 +239,17 @@ export function newDeviceId(random: () => number = Math.random): string {
 
 // ---------- migration from the old per-key records ----------
 
+/** Fixed pseudo-device that holds the one-time XP credit for old records. */
+export const LEGACY_DEVICE = 'legacybonus';
+
 /**
  * Before progress existed, records were stored as separate keys:
  *   best.pushup, best.pullup (before difficulties = medium rules), best.pullup.easy|medium|hard
- * Returns them as a Progress (records only) so it can be merged in.
+ * Returns them as a Progress so it can be merged in:
+ *   * the records themselves;
+ *   * a one-time XP credit for those sets (they were really done, but XP didn't exist yet),
+ *     stored under the fixed LEGACY_DEVICE id — merging uses max per device, so the credit
+ *     is never added twice (restarts, other phones, cloud syncs).
  */
 export function fromLegacyRecords(get: (key: string) => string | null): Progress {
   const p = emptyProgress();
@@ -255,5 +262,20 @@ export function fromLegacyRecords(get: (key: string) => string | null): Progress
   take('best.pullup.easy', 'pullup.easy');
   take('best.pullup.medium', 'pullup.medium');
   take('best.pullup.hard', 'pullup.hard');
+
+  const r = p.records;
+  if (Object.keys(r).length > 0) {
+    const c = emptyCounters();
+    const push = r.pushup ?? 0;
+    const pulls = { easy: r['pullup.easy'] ?? 0, medium: r['pullup.medium'] ?? 0, hard: r['pullup.hard'] ?? 0 };
+    c.xp.attack = r1(push * XP_RULES.pushup.perRep);
+    c.xp.strength = r1(
+      pulls.easy * XP_RULES.pullup.perPoint.easy + pulls.medium * XP_RULES.pullup.perPoint.medium + pulls.hard * XP_RULES.pullup.perPoint.hard,
+    );
+    c.pushupReps = push;
+    c.pullupPoints = r1(pulls.easy + pulls.medium + pulls.hard);
+    c.sets = Object.keys(r).length;
+    p.dev[LEGACY_DEVICE] = c;
+  }
   return p;
 }

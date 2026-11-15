@@ -58,6 +58,7 @@ export const ru = {
   info: 'Технические данные',
   platform: 'Платформа',
   version: 'Версия Telegram',
+  gameVersion: 'Версия игры',
 
   warmup: {
     title: 'Перед боем',

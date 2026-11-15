@@ -60,6 +60,7 @@ export const en: typeof ru = {
   info: 'Technical info',
   platform: 'Platform',
   version: 'Telegram version',
+  gameVersion: 'Game version',
 
   warmup: {
     title: 'Before the fight',
