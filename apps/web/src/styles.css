@@ -546,11 +546,12 @@ button {
 }
 
 /* ---------- "tap to enable sound" hint on the home screen ---------- */
-/* Small round icon-only button at the right edge; only the icon pulses */
+/* Small round icon-only button in the top-right corner of the hero area
+   (free space under "Settings", away from the bottom buttons); only the icon pulses */
 .sound-hint {
   position: absolute;
-  right: 0;
-  bottom: 6px;
+  right: 14px;
+  top: 6px;
   z-index: 2;
   width: 50px;
   height: 50px;
