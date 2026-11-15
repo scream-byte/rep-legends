@@ -47,9 +47,7 @@ export function StatsModal({ t, progress, sync, onClose }: Props) {
                   {active ? (
                     <span className="stat-bar" aria-label={`${L.into} / ${L.need} XP`}>
                       <span className="stat-bar-fill" style={{ width: `${L.percent}%` }} />
-                      <span className="stat-bar-text">
-                        {L.into} / {L.need} {S.xp}
-                      </span>
+                      <span className="stat-bar-text">{S.toNext(Math.round((L.need - L.into) * 10) / 10, L.level + 1)}</span>
                     </span>
                   ) : (
                     <small className="stat-soon-label">🔒 {t.comingSoon}</small>

@@ -22,6 +22,7 @@ export const ru = {
     note: 'Тренируйся — и герой станет сильнее!',
     xp: 'опыта',
     lvl: 'ур.',
+    toNext: (left: number, next: number) => `ещё ${left} опыта до ${next} ур.`,
     sync: {
       local: '📱 Прогресс сохранён на этом телефоне',
       syncing: '☁️ Синхронизация…',

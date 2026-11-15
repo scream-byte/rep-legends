@@ -128,8 +128,9 @@ export function totals(p: Progress): Counters {
 
 /** XP needed to go from stat level L to L+1: 10, 15, 20, 25, … (user's choice 2026-11-15) */
 export const statXpToNext = (level: number) => 10 + 5 * (level - 1);
-/** XP needed to go from hero level L to L+1: 25, 35, 45, … (sum of all stats) */
-export const heroXpToNext = (level: number) => 25 + 10 * (level - 1);
+/** XP needed to go from hero (player) level L to L+1: 50, 75, 100, … (sum of all stats).
+ *  The user asked to change only the STAT curve, not the player level — keep this as is. */
+export const heroXpToNext = (level: number) => 50 + 25 * (level - 1);
 
 export interface LevelInfo {
   level: number;

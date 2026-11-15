@@ -24,6 +24,7 @@ export const en: typeof ru = {
     note: 'Train to make your hero stronger!',
     xp: 'XP',
     lvl: 'lvl',
+    toNext: (left: number, next: number) => `${left} XP to lvl ${next}`,
     sync: {
       local: '📱 Progress saved on this phone',
       syncing: '☁️ Syncing…',

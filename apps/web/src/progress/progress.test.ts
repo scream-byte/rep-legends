@@ -32,7 +32,8 @@ check('stat level 2 at 10 XP, then 15 more', statLevel(10).level === 2 && statLe
 check('stat level 3 at 25 XP (10+15), then 20 more', statLevel(25).level === 3 && statLevel(25).need === 20);
 check('stat level 4 at 45 XP (10+15+20)', statLevel(45).level === 4);
 check('stat level percent', statLevel(5).percent === 50);
-check('hero: 25 XP to level 2, then 35', heroLevel({ ...emptyProgress(), dev: { phoneaaa111: { ...applySet(emptyProgress(), { exercise: 'pushup', score: 25, recordKey: 'pushup' }, 'phoneaaa111').progress.dev.phoneaaa111 } } }).level === 2);
+const heroAt = (xp: number) => heroLevel(applySet(emptyProgress(), { exercise: 'pushup', score: xp, recordKey: 'pushup' }, 'phoneaaa111').progress);
+check('player level is unchanged: 50 XP to level 2, then 75', heroAt(49).level === 1 && heroAt(50).level === 2 && heroAt(124).level === 2 && heroAt(125).level === 3);
 check('negative / huge XP is safe', statLevel(-5).level === 1 && statLevel(1e9).level <= 999);
 
 // ---------- XP from sets ----------
@@ -55,7 +56,7 @@ const t5 = totals(s5.progress);
 check('totals', t5.pushupReps === 35 && t5.pullupPoints === 16.5 && t5.sets === 5);
 const s0 = applySet(s5.progress, { exercise: 'pushup', score: 0, recordKey: 'pushup', now: 6 }, PHONE);
 check('empty set (0 reps): no XP, not counted as a set', s0.xpGained === 0 && totals(s0.progress).sets === 5 && !s0.newRecord);
-check('hero level grows from all XP (85.5 XP → level 3)', heroLevel(s5.progress).level === 3);
+check('player level grows from all XP (85.5 XP → level 2)', heroLevel(s5.progress).level === 2);
 
 // ---------- saves can never lose data ----------
 const phone: Progress = s5.progress;
