@@ -23,6 +23,17 @@ export const TrophyIcon = (p: P) => (
   </Svg>
 );
 
+/** Four coloured stat bars on a card */
+export const StatsIcon = (p: P) => (
+  <Svg {...p}>
+    <rect x="5" y="6" width="38" height="36" rx="6" fill="#fff" />
+    <rect x="10" y="26" width="6" height="11" rx="1.5" fill="#ffd400" />
+    <rect x="18" y="18" width="6" height="19" rx="1.5" fill="#9fb4d6" />
+    <rect x="26" y="22" width="6" height="15" rx="1.5" fill="#ff3d5a" />
+    <rect x="34" y="12" width="6" height="25" rx="1.5" fill="#5cc8ff" />
+  </Svg>
+);
+
 export const FriendsIcon = (p: P) => (
   <Svg {...p}>
     <circle cx="32" cy="15" r="7" fill="#5cc8ff" />

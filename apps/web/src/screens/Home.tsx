@@ -5,18 +5,16 @@ import type { Dict } from '../i18n';
 import type { Settings } from '../settings';
 import { getUser, haptic, insideTelegram } from '../telegram/tg';
 import { SettingsModal } from '../ui/SettingsModal';
+import { StatsModal } from '../ui/StatsModal';
 import { Hero } from '../ui/Hero';
 import { LevelBadge } from '../ui/LevelBadge';
 import {
-  BoltIcon,
-  DumbbellIcon,
   FriendsIcon,
   GearIcon,
-  HeartIcon,
   HelmetIcon,
   HomeIcon,
   ScrollIcon,
-  ShieldIcon,
+  StatsIcon,
   SwordsIcon,
   TrophyIcon,
 } from '../ui/icons';
@@ -35,6 +33,7 @@ interface Props {
 export function Home({ t, settings, update, reset, onPlay }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(isUnlocked);
   const name = getUser()?.first_name ?? t.guest;
 
@@ -61,12 +60,10 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
     setSettingsOpen(true);
   }
 
-  const stats = [
-    { key: 'attack', icon: <BoltIcon size={26} />, label: t.stats.attack, value: HERO.attack },
-    { key: 'strength', icon: <DumbbellIcon size={26} />, label: t.stats.strength, value: HERO.strength },
-    { key: 'endurance', icon: <HeartIcon size={26} />, label: t.stats.endurance, value: HERO.endurance },
-    { key: 'defense', icon: <ShieldIcon size={26} />, label: t.stats.defense, value: HERO.defense },
-  ];
+  function openStats() {
+    sfx.click();
+    setStatsOpen(true);
+  }
 
   const nav = [
     { key: 'hero', icon: <HelmetIcon size={34} />, label: t.nav.hero },
@@ -95,19 +92,6 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
         </div>
       </header>
 
-      {/* Hero stats */}
-      <section className="stats">
-        {stats.map((s) => (
-          <div key={s.key} className="stat">
-            <div className="stat-top">
-              {s.icon}
-              <b className="outlined">{s.value}</b>
-            </div>
-            <small>{s.label}</small>
-          </div>
-        ))}
-      </section>
-
       {/* Stage: side buttons around the greeting, hero fills the rest */}
       <section className="stage">
         <button className="side-btn" onClick={soon}>
@@ -125,6 +109,11 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
 
         <div className="hero-box">
           <Hero className="hero" />
+          {/* Hero stats live behind one button so the hero gets more room */}
+          <button className="side-btn stats-btn" onClick={openStats}>
+            <StatsIcon size={40} />
+            <span className="outlined">{t.statsPanel.button}</span>
+          </button>
           {!soundOn && (
             // Any tap unlocks audio (handled globally); this button just invites one.
             <button className="sound-hint" aria-label={t.enableSound} title={t.enableSound} onClick={() => haptic('light')}>
@@ -169,6 +158,8 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
       {settingsOpen && (
         <SettingsModal t={t} settings={settings} update={update} reset={reset} onClose={() => setSettingsOpen(false)} />
       )}
+
+      {statsOpen && <StatsModal t={t} stats={HERO} onClose={() => setStatsOpen(false)} />}
     </div>
   );
 }
