@@ -135,4 +135,12 @@ const real = [
 ];
 run('real phone sequence (hang 157°, top 65° / bar +0.33)', real, 1);
 
+// Fast, continuous reps with NO pause at the bottom (user's normal pace, 2026-11-15),
+// at a real Android frame rate (28 fps). Arms only touch ~157° for an instant.
+const fastSet = (cycleMs: number, n: number) =>
+  Array.from({ length: n }, () => pull(cycleMs, 65, 0.3, 157)).flat();
+run('fast pace: 6 reps × 1.2 s, no pause (28 fps)', fastSet(1200, 6), 6, [], 28);
+run('fast pace: 6 reps × 1.0 s, no pause (28 fps)', fastSet(1000, 6), 6, [], 28);
+run('very fast: 6 reps × 0.8 s, no pause (28 fps)', fastSet(800, 6), 6, [], 28);
+
 if (failed) process.exitCode = 1;

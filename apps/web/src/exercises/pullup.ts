@@ -31,16 +31,19 @@ export const PULLUP_RULES = {
   hangLift: 0.1,
   /** "came clearly down from the bar" = score below this */
   leftBarScore: -0.3,
-  /** the pulling phase alone (leaving the dead hang → chin over bar) can't be faster than this */
-  minRepMs: 300,
+  /** the pulling phase alone (leaving the dead hang → chin over bar) can't be faster than this.
+   *  Trained athletes pull up in ~0.2–0.3 s (user's normal pace was rejected at 300).
+   *  150 ms ≈ 4 frames at 28 fps: still rejects one-frame camera glitches. */
+  minRepMs: 150,
   /** AVERAGE MediaPipe visibility of shoulders, elbows and wrists needed to trust the frame.
    *  Low on purpose ("trust mode"): from behind, bent arms at the bar get low visibility
    *  even though the points are placed correctly (seen on a real phone: top of rep went red). */
   minVisibility: 0.3,
   /** face (nose + mouth) counts as visible above this — otherwise we assume a back view */
   faceVisibility: 0.6,
-  /** smoothing for the elbow angle (0..1, higher = less smoothing) */
-  emaAlpha: 0.45,
+  /** light smoothing for the elbow angle (0..1, higher = less smoothing): fast reps
+   *  only touch straight arms for an instant, heavy smoothing would hide that */
+  emaAlpha: 0.7,
 } as const;
 
 // BlazePose landmark indices
@@ -168,7 +171,8 @@ export class PullupCounter implements Counter<PullupFrame> {
     const a = this.smooth;
 
     // ----- bottom: arms straight (dead hang) -----
-    if (a >= R.straightArms) {
+    // The raw angle counts too: at a fast pace the arms are straight only for a frame or two.
+    if (a >= R.straightArms || f.elbow >= R.straightArms) {
       // pulled hard but the chin never reached the bar
       const missedTop = this.pullStart != null && !this.topReached && this.minElbow < R.pullStarted;
       this.armed = true;
