@@ -291,6 +291,67 @@ button {
   font-weight: 900;
 }
 
+/* XP bar inside a stat row */
+.stat-bar {
+  position: relative;
+  display: block;
+  height: 16px;
+  margin-top: 4px;
+  background: #dbe4f5;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(var(--yellow-1), var(--yellow-2));
+}
+
+.stat-bar-text {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 12px;
+}
+
+.stat-value-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.stat-value-box small {
+  font-size: 11px;
+  font-weight: 800;
+  color: #4a5578;
+}
+
+.stat-soon {
+  opacity: 0.6;
+}
+
+.stat-soon-label {
+  margin-top: 2px;
+}
+
+.sync-note {
+  margin: 0;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3a4590;
+}
+
+.sync-note.sync-error,
+.sync-note.sync-local {
+  color: #8a5a00;
+}
+
 /* a coloured stripe on the left of each stat */
 .stat-attack {
   box-shadow: inset 6px 0 0 #ffd400;

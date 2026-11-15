@@ -6,7 +6,7 @@ import type { BaseFrame, Breakdown, Counter } from '../exercises/types';
 import type { Dict } from '../i18n';
 import { CameraError, keepScreenOn, startCamera, stopStream, type Facing } from '../pose/camera';
 import { loadPoseLandmarker, type LoadedLandmarker } from '../pose/landmarker';
-import { keys, load, save } from '../storage';
+import { recordSet, type SetOutcome } from '../progress/store';
 import { haptic, hapticNotify, showBackButton } from '../telegram/tg';
 import { SetupArt } from '../ui/SetupArt';
 import './workout.css';
@@ -30,6 +30,10 @@ interface Result {
   best: number;
   newBest: boolean;
   breakdown?: Breakdown;
+  /** XP / level changes from this set */
+  outcome: SetOutcome;
+  /** 'saving' until the cloud answers; 'local' = only on this phone */
+  savedTo: 'saving' | 'cloud' | 'local';
 }
 
 function formatTime(ms: number): string {
@@ -43,7 +47,6 @@ const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(
 /** One camera workout screen for every exercise (see src/exercises/types.ts). */
 export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
   const def = useMemo(() => getExercise(exercise, variant), [exercise, variant]);
-  const recordKey = keys.best(recordId(exercise, variant));
   const text = t.exercises[exercise];
   const difficulty = variant.pullup?.difficulty;
 
@@ -370,12 +373,25 @@ export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
     if (phaseRef.current !== 'active') return;
     const ms = performance.now() - startedAtRef.current;
     const count = counterRef.current.reps;
-    const prev = Number(load(recordKey) ?? 0) || 0;
-    const newBest = count > prev;
-    if (newBest) save(recordKey, String(count));
     stopAll();
+    // Save first (phone instantly, cloud in the background), then show the result.
+    const { outcome, saved } = recordSet({
+      exercise,
+      difficulty: variant.pullup?.difficulty,
+      score: count,
+      recordKey: recordId(exercise, variant),
+    });
     const b = counterRef.current.breakdown;
-    setResult({ reps: count, ms, best: Math.max(prev, count), newBest, breakdown: b ? { ...b } : undefined });
+    setResult({
+      reps: count,
+      ms,
+      best: Math.max(outcome.previousRecord, count),
+      newBest: outcome.newRecord,
+      breakdown: b ? { ...b } : undefined,
+      outcome,
+      savedTo: 'saving',
+    });
+    saved.then((where) => setResult((r) => (r ? { ...r, savedTo: where } : r)));
     setPhase('result');
     hapticNotify('success');
     sfx.finish();
@@ -526,9 +542,26 @@ export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
                 {t.workout.time}: <b>{formatTime(result.ms)}</b>
               </span>
               <span>
-                {t.workout.best}: <b>{result.best}</b>
+                {t.workout.best}: <b>{formatScore(result.best)}</b>
               </span>
             </div>
+            {result.outcome.xpGained > 0 && (
+              <div className={`xp-gain stat-${result.outcome.stat}`}>
+                <b>
+                  +{formatScore(result.outcome.xpGained)} {t.statsPanel.xp}
+                </b>{' '}
+                · {t.statsPanel[result.outcome.stat]}
+                {result.outcome.statLevelAfter > result.outcome.statLevelBefore && (
+                  <p className="level-up outlined">
+                    ⬆ {t.workout.statLevelUp(t.statsPanel[result.outcome.stat], result.outcome.statLevelAfter)}
+                  </p>
+                )}
+                {result.outcome.heroLevelAfter > result.outcome.heroLevelBefore && (
+                  <p className="level-up outlined">🎉 {t.workout.heroLevelUp(result.outcome.heroLevelAfter)}</p>
+                )}
+              </div>
+            )}
+            <p className={`sync-note sync-${result.savedTo}`}>{t.workout.saved[result.savedTo]}</p>
             <button className="btn3d primary" onClick={() => begin()}>
               {t.workout.again}
             </button>

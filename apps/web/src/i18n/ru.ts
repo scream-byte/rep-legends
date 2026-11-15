@@ -20,6 +20,14 @@ export const ru = {
     defense: 'Защита',
     defenseFrom: 'Растёт от упражнений на пресс',
     note: 'Тренируйся — и герой станет сильнее!',
+    xp: 'опыта',
+    lvl: 'ур.',
+    sync: {
+      local: '📱 Прогресс сохранён на этом телефоне',
+      syncing: '☁️ Синхронизация…',
+      cloud: '☁️ Прогресс сохранён в облаке Telegram',
+      error: '📱 Сохранено на телефоне. Облако недоступно — синхронизируем позже',
+    },
   },
   friends: 'Друзья',
   settings: 'Настройки',
@@ -164,6 +172,13 @@ export const ru = {
   },
 
   workout: {
+    statLevelUp: (stat: string, level: number) => `${stat}: уровень ${level}!`,
+    heroLevelUp: (level: number) => `Герой достиг ${level} уровня!`,
+    saved: {
+      saving: '⏳ Сохраняю…',
+      cloud: '☁️ Прогресс сохранён в облаке Telegram',
+      local: '📱 Сохранено на телефоне (облако синхронизируется позже)',
+    },
     points: 'очков',
     breakdown: {
       clean: 'Чистых',

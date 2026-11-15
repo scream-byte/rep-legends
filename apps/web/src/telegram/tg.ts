@@ -24,6 +24,11 @@ interface TgWebApp {
     impactOccurred(style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft'): void;
     notificationOccurred(type: 'error' | 'success' | 'warning'): void;
   };
+  /** Telegram's per-user cloud key-value storage (Bot API 6.9+), synced across devices */
+  CloudStorage?: {
+    setItem(key: string, value: string, cb?: (err: string | null, ok?: boolean) => void): void;
+    getItem(key: string, cb: (err: string | null, value?: string) => void): void;
+  };
   BackButton?: {
     show(): void;
     hide(): void;
@@ -78,6 +83,35 @@ export function haptic(style: 'light' | 'medium' | 'heavy' = 'medium'): void {
 
 export function hapticNotify(type: 'error' | 'success' | 'warning'): void {
   if (canVibrate()) webApp?.HapticFeedback?.notificationOccurred(type);
+}
+
+// ---------- Telegram CloudStorage (survives app data wipes and device changes) ----------
+
+export const cloudAvailable = (): boolean => insideTelegram && webApp!.isVersionAtLeast('6.9') && !!webApp!.CloudStorage;
+
+/** Reads a cloud key. Resolves null if missing; rejects on error or timeout. */
+export function cloudGet(key: string, timeoutMs = 5000): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    if (!cloudAvailable()) return reject(new Error('cloud unavailable'));
+    const timer = setTimeout(() => reject(new Error('cloud timeout')), timeoutMs);
+    webApp!.CloudStorage!.getItem(key, (err, value) => {
+      clearTimeout(timer);
+      if (err) reject(new Error(err));
+      else resolve(value ? value : null);
+    });
+  });
+}
+
+/** Writes a cloud key (max 4096 chars). Resolves true when Telegram confirms. */
+export function cloudSet(key: string, value: string, timeoutMs = 5000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!cloudAvailable() || value.length > 4096) return resolve(false);
+    const timer = setTimeout(() => resolve(false), timeoutMs);
+    webApp!.CloudStorage!.setItem(key, value, (err, ok) => {
+      clearTimeout(timer);
+      resolve(!err && ok !== false);
+    });
+  });
 }
 
 /**

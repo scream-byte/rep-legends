@@ -2,7 +2,8 @@ import { useEffect, type ReactNode } from 'react';
 import { sfx } from '../audio/sfx';
 import { ARENAS, type ExerciseId } from '../exercises';
 import type { Dict } from '../i18n';
-import { keys, load } from '../storage';
+import { statLevel, statXp } from '../progress/progress';
+import { useProgress } from '../progress/store';
 import { haptic, showBackButton } from '../telegram/tg';
 import { BoltIcon, DumbbellIcon, HeartIcon, ShieldIcon } from '../ui/icons';
 import { MenuBackdrop } from '../ui/MenuBackdrop';
@@ -24,6 +25,7 @@ const STAT_ICON: Record<string, ReactNode> = {
 export function Arenas({ t, onPick, onBack }: Props) {
   useEffect(() => showBackButton(onBack), [onBack]);
   const A = t.arenasScreen;
+  const { progress } = useProgress();
 
   return (
     <div className="app arenas-screen">
@@ -49,7 +51,8 @@ export function Arenas({ t, onPick, onBack }: Props) {
         {ARENAS.map((a) => {
           // pull-up records are kept per difficulty: show the best of them
           const ids = a.id === 'pullup' ? ['pullup.easy', 'pullup.medium', 'pullup.hard'] : [a.id];
-          const best = Math.max(0, ...ids.map((id) => Number(load(keys.best(id)) ?? 0) || 0));
+          const best = Math.max(0, ...ids.map((id) => progress.records[id] ?? 0));
+          const lvl = statLevel(statXp(progress, a.stat)).level;
           return (
             <li key={a.id}>
               <button
@@ -65,7 +68,10 @@ export function Arenas({ t, onPick, onBack }: Props) {
                 <span className="arena-icon">{STAT_ICON[a.stat]}</span>
                 <span className="arena-text">
                   <b className="outlined">{t.exercises[a.id].name}</b>
-                  <small>{A.trains(t.statsPanel[a.stat])}</small>
+                  <small>
+                    {A.trains(t.statsPanel[a.stat])}
+                    {a.playable && ` · ${t.statsPanel.lvl} ${lvl}`}
+                  </small>
                 </span>
                 {a.playable ? (
                   <span className="arena-best">

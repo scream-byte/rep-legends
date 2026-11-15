@@ -21,8 +21,14 @@ export function save(key: string, value: string): void {
 
 export const keys = {
   warmupAck: 'warmupAck',
-  /** personal record per exercise, e.g. best('pullup') → 'best.pullup' */
+  /** LEGACY (before progress.ts): personal record per exercise. Read only for migration. */
   best: (exercise: string) => `best.${exercise}`,
+  /** player progress (XP, records) as JSON — see src/progress */
+  progress: 'progress',
+  /** the previous saved progress, kept as a backup */
+  progressBackup: 'progress.bak',
+  /** this device's random id (for per-device XP counters) */
+  deviceId: 'deviceId',
   /** last chosen pull-up difficulty + band toggle, JSON */
   pullupOptions: 'pullup.options',
   settings: 'settings',

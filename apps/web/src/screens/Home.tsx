@@ -6,6 +6,8 @@ import type { Settings } from '../settings';
 import { getUser, haptic, insideTelegram } from '../telegram/tg';
 import { SettingsModal } from '../ui/SettingsModal';
 import { StatsModal } from '../ui/StatsModal';
+import { heroLevel } from '../progress/progress';
+import { useProgress } from '../progress/store';
 import { Hero } from '../ui/Hero';
 import { LevelBadge } from '../ui/LevelBadge';
 import { MenuBackdrop } from '../ui/MenuBackdrop';
@@ -21,7 +23,8 @@ import {
 } from '../ui/icons';
 
 // Placeholder hero progress until real data arrives in stage 4.
-const HERO = { level: 1, xpPercent: 0, rank: 'E', attack: 1, strength: 1, endurance: 1, defense: 1 };
+// Rank arrives in a later stage; level and XP come from saved progress.
+const RANK = 'E';
 
 interface Props {
   t: Dict;
@@ -37,6 +40,8 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
   const [statsOpen, setStatsOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(isUnlocked);
   const name = getUser()?.first_name ?? t.guest;
+  const { progress, sync } = useProgress();
+  const hero = heroLevel(progress);
 
   // Browsers block sound until the first tap: show a hint until audio is allowed.
   useEffect(() => {
@@ -81,15 +86,15 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
       {/* Top bar: level + XP, rank */}
       <header className="topbar">
         <div className="level">
-          <LevelBadge level={HERO.level} label={t.levelShort} />
+          <LevelBadge level={hero.level} label={t.levelShort} />
           <div className="xp-bar">
-            <div className="xp-fill" style={{ width: `${Math.max(HERO.xpPercent, 4)}%` }} />
-            <span className="outlined">{HERO.xpPercent}%</span>
+            <div className="xp-fill" style={{ width: `${Math.max(hero.percent, 4)}%` }} />
+            <span className="outlined">{hero.percent}%</span>
           </div>
         </div>
         <div className="rank-pill">
           <span>{t.rank}</span>
-          <b className="outlined">{HERO.rank}</b>
+          <b className="outlined">{RANK}</b>
         </div>
         <button className="gear-btn" aria-label={t.settings} title={t.settings} onClick={openSettings}>
           <SettingsGearIcon size={46} />
@@ -178,7 +183,7 @@ export function Home({ t, settings, update, reset, onPlay }: Props) {
         <SettingsModal t={t} settings={settings} update={update} reset={reset} onClose={() => setSettingsOpen(false)} />
       )}
 
-      {statsOpen && <StatsModal t={t} stats={HERO} onClose={() => setStatsOpen(false)} />}
+      {statsOpen && <StatsModal t={t} progress={progress} sync={sync} onClose={() => setStatsOpen(false)} />}
     </div>
   );
 }

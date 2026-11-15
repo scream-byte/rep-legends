@@ -22,6 +22,14 @@ export const en: typeof ru = {
     defense: 'Defense',
     defenseFrom: 'Grows with ab exercises',
     note: 'Train to make your hero stronger!',
+    xp: 'XP',
+    lvl: 'lvl',
+    sync: {
+      local: '📱 Progress saved on this phone',
+      syncing: '☁️ Syncing…',
+      cloud: '☁️ Progress saved in Telegram cloud',
+      error: "📱 Saved on the phone. Cloud unavailable — we'll sync later",
+    },
   },
   friends: 'Friends',
   settings: 'Settings',
@@ -155,6 +163,13 @@ export const en: typeof ru = {
   },
 
   workout: {
+    statLevelUp: (stat: string, level: number) => `${stat}: level ${level}!`,
+    heroLevelUp: (level: number) => `Hero reached level ${level}!`,
+    saved: {
+      saving: '⏳ Saving…',
+      cloud: '☁️ Progress saved in Telegram cloud',
+      local: '📱 Saved on the phone (cloud will sync later)',
+    },
     points: 'points',
     breakdown: {
       clean: 'Clean',

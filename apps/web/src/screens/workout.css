@@ -246,6 +246,31 @@
 }
 
 /* ---------- debug ---------- */
+.xp-gain {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+}
+
+.xp-gain b {
+  font-size: 20px;
+  font-weight: 900;
+  color: #2a5bd7;
+}
+
+.level-up {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--yellow-1);
+  -webkit-text-stroke-width: 4px;
+  animation: count-pop 0.8s ease-out;
+}
+
 .result-breakdown {
   margin: 0;
   padding: 8px 12px;
