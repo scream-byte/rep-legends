@@ -171,10 +171,13 @@ button {
   max-width: 220px;
 }
 
+/* The badge SVG has wide margins for plates & ornaments (ui/LevelBadge.tsx): negative
+   margins let them overflow without making the top bar taller or pushing the XP bar. */
 .level-badge {
   position: relative;
   z-index: 1;
   flex-shrink: 0;
+  margin: -8px -12px -26px -10px;
   filter: drop-shadow(0 3px 0 var(--ink));
 }
 

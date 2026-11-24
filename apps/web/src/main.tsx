@@ -4,6 +4,7 @@ import { App } from './App';
 import { initAudio } from './audio/engine';
 import { initProgress } from './progress/store';
 import { initTelegram } from './telegram/tg';
+import { BadgePreview } from './ui/BadgePreview';
 import '@fontsource/rubik/cyrillic-700.css';
 import '@fontsource/rubik/cyrillic-800.css';
 import '@fontsource/rubik/cyrillic-900.css';
@@ -16,8 +17,9 @@ initTelegram();
 initAudio();
 initProgress();
 
+// ?badges → developer preview of all level badges (not linked from the game)
+const preview = new URLSearchParams(location.search).has('badges');
+
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <StrictMode>{preview ? <BadgePreview /> : <App />}</StrictMode>,
 );
