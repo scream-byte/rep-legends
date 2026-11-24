@@ -4,10 +4,10 @@
 
 import type { Pt } from '../pose/geometry.ts';
 
-export type ExerciseId = 'pushup' | 'pullup';
+export type ExerciseId = 'pushup' | 'pullup' | 'squat';
 
 /** Every exercise that will exist, including ones not built yet (shown as locked arenas). */
-export type ArenaId = ExerciseId | 'squat' | 'abs';
+export type ArenaId = ExerciseId | 'abs';
 
 export interface Landmark {
   x: number;

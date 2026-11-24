@@ -58,6 +58,12 @@ const s0 = applySet(s5.progress, { exercise: 'pushup', score: 0, recordKey: 'pus
 check('empty set (0 reps): no XP, not counted as a set', s0.xpGained === 0 && totals(s0.progress).sets === 5 && !s0.newRecord);
 check('player level grows from all XP (85.5 XP → level 2)', heroLevel(s5.progress).level === 2);
 
+// ---------- squats (stage 3) ----------
+const sq = applySet(s5.progress, { exercise: 'squat', score: 12, recordKey: 'squat', now: 7 }, PHONE);
+check('12 squats → +12 Endurance XP, Endurance level 2', sq.stat === 'endurance' && sq.xpGained === 12 && sq.statLevelAfter === 2 && sq.newRecord);
+check('squat totals counted separately', totals(sq.progress).squatReps === 12 && totals(sq.progress).pushupReps === 35);
+check('an older save without squatReps still loads (reads as 0)', totals(sanitize({ dev: { oldphone11: { xp: { attack: 5 }, pushupReps: 5, sets: 1 } } })).squatReps === 0);
+
 // ---------- saves can never lose data ----------
 const phone: Progress = s5.progress;
 const oldCloud: Progress = s2.progress; // an older copy of the same device

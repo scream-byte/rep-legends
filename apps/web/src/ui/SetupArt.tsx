@@ -4,7 +4,45 @@ const INK = '#1b1d4a';
 
 /** Simple picture showing where to put the phone for each exercise. */
 export function SetupArt({ exercise }: { exercise: ExerciseId }) {
-  return exercise === 'pullup' ? <PullupArt /> : <PushupArt />;
+  if (exercise === 'pullup') return <PullupArt />;
+  if (exercise === 'squat') return <SquatArt />;
+  return <PushupArt />;
+}
+
+/** Phone on the floor; athlete side-on, shown standing (faded) and at the bottom of a squat. */
+function SquatArt() {
+  return (
+    <svg className="setup-art" viewBox="0 0 300 140" aria-hidden>
+      <path d="M10 128 H290" stroke={INK} strokeWidth="4" strokeLinecap="round" />
+      {/* phone */}
+      <rect x="22" y="76" width="28" height="50" rx="5" fill="#fff" stroke={INK} strokeWidth="4" />
+      <circle cx="36" cy="84" r="3" fill={INK} />
+      {/* field of view */}
+      <path d="M50 90 L290 10 M50 90 L290 128" stroke="#5cc8ff" strokeWidth="3" strokeDasharray="6 6" />
+      {/* distance */}
+      <path d="M56 134 H170 M56 131 v6 M170 131 v6" stroke={INK} strokeWidth="2" />
+      <text x="113" y="124" textAnchor="middle" fontSize="11" fontWeight="800" fill={INK}>
+        2–3 m
+      </text>
+      {/* standing silhouette (start position), faded */}
+      <g opacity="0.3" stroke={INK} strokeWidth="6" strokeLinecap="round" fill="none">
+        <path d="M200 40 L200 82 M200 82 L200 126" />
+      </g>
+      <circle cx="200" cy="30" r="9" fill="#ff8a1f" opacity="0.3" />
+      {/* squat at the bottom: hips back, thighs ~parallel, back leaning a little */}
+      <g stroke={INK} strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        <path d="M244 62 L232 98" stroke="#ff8a1f" />
+        <path d="M232 98 L262 98 L256 126 L270 126" />
+        <path d="M244 70 L270 80" />
+      </g>
+      <circle cx="248" cy="52" r="10" fill="#ff8a1f" stroke={INK} strokeWidth="4" />
+      {/* "thighs parallel" mark */}
+      <path d="M230 106 H264" stroke="#3fd06a" strokeWidth="3" strokeDasharray="4 3" />
+      <text x="247" y="118" textAnchor="middle" fontSize="9" fontWeight="800" fill="#2f9e55">
+        ≈ 90°
+      </text>
+    </svg>
+  );
 }
 
 /** Phone standing on the floor, player in a plank side-on. */

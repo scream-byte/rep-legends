@@ -131,7 +131,29 @@ export const en: typeof ru = {
         kipZero: "No kipping! Doesn't count",
       } as Record<string, string>,
     },
-    squat: { name: 'Squats' },
+    squat: {
+      name: 'Squats',
+      setup: [
+        'Stand the phone upright on the floor or a low support 2–3 m away, screen facing you.',
+        'Stand SIDE-ON or at an angle to the phone — so the camera can see your knees bend. Your whole body must be in frame: head, hips, knees and feet.',
+        'Feet shoulder-width apart, toes slightly out.',
+        'Go down as if sitting on a chair: hips back, knees in line with your toes, heels on the floor.',
+        "A squat counts when your thighs are about parallel to the floor. Deeper is fine, but not required.",
+        "Keep your back straight and chest up. Don't bounce at the bottom — move smoothly.",
+      ],
+      calibrate: {
+        notVisible: 'Your whole body must be in frame — head to feet',
+        turnSide: 'Turn side-on to the phone',
+        standUp: 'Stand up straight',
+        hold: 'Great! Hold still…',
+      } as Record<string, string>,
+      hints: {
+        lower: 'A bit lower!',
+        chest: 'Back straight, chest up!',
+        fast: 'Too fast! Smoother',
+        lost: "Can't see you",
+      } as Record<string, string>,
+    },
     abs: { name: 'Abs' },
   },
 

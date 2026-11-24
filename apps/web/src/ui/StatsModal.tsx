@@ -13,7 +13,7 @@ interface Props {
 }
 
 /** Stats that already have an arena (the others show "soon"). */
-const ACTIVE: StatKey[] = ['attack', 'strength'];
+const ACTIVE: StatKey[] = ['attack', 'strength', 'endurance'];
 
 /** The hero's four stats: level, XP bar, and which exercise trains each. */
 export function StatsModal({ t, progress, sync, onClose }: Props) {
