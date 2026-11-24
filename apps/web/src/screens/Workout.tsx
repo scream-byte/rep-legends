@@ -41,6 +41,9 @@ function formatTime(ms: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
+/** Counter hints that describe a lasting state: shown as a banner while they last. */
+const LASTING_HINTS = ['lost', 'place'];
+
 /** Scores can be fractional (½ point for kipping on medium): show "7" or "7.5". */
 const formatScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
@@ -63,7 +66,8 @@ export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
   const counterRef = useRef<Counter<BaseFrame>>(def.createCounter());
   const holdSinceRef = useRef<number | null>(null);
   const calibRef = useRef<string | null>(null);
-  const lostRef = useRef(false);
+  /** key of the lasting banner currently shown ('lost', 'place') or null */
+  const lostRef = useRef<string | null>(null);
   const outSinceRef = useRef<number | null>(null);
   const autoLeftRef = useRef<number | null>(null);
   const startedAtRef = useRef(0);
@@ -77,7 +81,7 @@ export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
   const [countdown, setCountdown] = useState(def.countdown);
   const [reps, setReps] = useState(0);
   const [hint, setHint] = useState<{ key: string; id: number } | null>(null);
-  const [lost, setLost] = useState(false);
+  const [lost, setLost] = useState<string | null>(null);
   const [autoLeft, setAutoLeft] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
@@ -209,10 +213,17 @@ export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
     }
 
     const u = counterRef.current.update(f, now);
-    const isLost = u.hint === 'lost';
-    if (isLost !== lostRef.current) {
-      lostRef.current = isLost;
-      setLost(isLost);
+    // Lasting states ("can't see you", "back to your spot") are shown as a banner while
+    // they last — not as a pop-up + warning sound on every frame.
+    const lasting = u.hint && LASTING_HINTS.includes(u.hint) ? u.hint : null;
+    const isLost = lasting != null;
+    if (lasting !== lostRef.current) {
+      if (lasting === 'place' && lostRef.current !== 'place') {
+        hapticNotify('warning');
+        sfx.warn();
+      }
+      lostRef.current = lasting;
+      setLost(lasting);
     }
     if (u.counted) {
       setReps(counterRef.current.reps);
@@ -356,8 +367,8 @@ export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
 
     holdSinceRef.current = null;
     calibRef.current = null;
-    lostRef.current = false;
-    setLost(false);
+    lostRef.current = null;
+    setLost(null);
     setCalib('notVisible');
     setPhase('calibrating');
     runLoop();
@@ -494,7 +505,7 @@ export function Workout({ t, exercise, variant = {}, onBack, onHome }: Props) {
           {autoLeft != null ? (
             <div className="banner warn-banner">{t.workout.autoFinish(autoLeft)}</div>
           ) : (
-            lost && <div className="banner warn-banner">{hintText('lost')}</div>
+            lost && <div className="banner warn-banner">{hintText(lost)}</div>
           )}
           {hint && !lost && autoLeft == null && (
             <div key={hint.id} className="hint-pop outlined">

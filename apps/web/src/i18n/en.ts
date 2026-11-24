@@ -152,6 +152,7 @@ export const en: typeof ru = {
         chest: 'Back straight, chest up!',
         fast: 'Too fast! Smoother',
         lost: "Can't see you",
+        place: 'Go back to your spot in front of the camera',
       } as Record<string, string>,
     },
     abs: { name: 'Abs' },
