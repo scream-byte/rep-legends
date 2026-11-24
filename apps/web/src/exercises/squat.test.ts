@@ -61,6 +61,18 @@ const times = <T,>(n: number, fn: () => T[]) => Array.from({ length: n }, fn).fl
 
 // ---------- normal squats ----------
 run('1 normal squat (thighs parallel, 1.6 s)', squat(1600), 1);
+{
+  // starts squatting right after "3-2-1" (no standing frames at all before the first rep)
+  const c = new SquatCounter();
+  let t = 0;
+  for (const f of [...times(5, () => squat(1400)), ...stand(6)]) {
+    c.update(f, t);
+    t += 1000 / FPS;
+  }
+  const ok = c.reps >= 4;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  squat: starts squatting immediately after the countdown: reps=${c.reps} of 5 (first may be used to learn the stance)`);
+  if (!ok) failed = true;
+}
 run('30 normal squats in a row (user\'s set)', times(30, () => [...squat(1600), ...stand(4)]), 30);
 run('just at the "moderate" depth (110°, hips −32%)', squat(1600, 110, 0.32), 1);
 run('deep squat (70°) also counts', squat(1800, 70, 0.6, 45), 1);

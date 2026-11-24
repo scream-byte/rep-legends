@@ -22,13 +22,36 @@ export const SQUAT_RULES = {
   minDrop: 0.2,
   /** … OR hips dropped this much on their own (knee angle may read high at 45°) */
   deepDrop: 0.3,
-  /** standing again: knee above this AND hips back up (drop below `upDrop`) */
-  upAngle: 150,
-  upDrop: 0.12,
-  /** a squat attempt has started: hips went down by this share (~4 cm on 90 cm legs) */
-  startDrop: 0.045,
-  /** frames a state change must hold (≈0.1 s at 30 fps) */
+  /** standing again: hips back near the top (drop ≤ `upDrop`) and knees fairly straight */
+  upAngle: 135,
+  upDrop: 0.15,
+  /** a squat attempt has started: hips went this much below the athlete's rest level (~2.7 cm) */
+  startDrop: 0.03,
+  /** "a bit lower" is shown only if the attempt really went this deep (~3.2 cm) —
+   *  shallower = just jitter, ended silently */
+  lowerHintMin: 0.035,
+  /** rest level follows small changes within this band (imperfect lock-out between reps) */
+  restBand: 0.03,
+  /** how fast the rest level follows (slow: a 4 cm dip must not be "learned" as the new rest) */
+  restAlpha: 0.03,
+  /** … and only follows jitter this small (≈2.5 cm), never a real dip */
+  restCreepBand: 0.028,
+  /** standing clearly taller must last this long before it becomes the new rest level */
+  restResetMs: 300,
+  /** standing height: averaged over this first period of standing */
+  standLearnMs: 1000,
+  /** … later only re-learned when standing taller by more than this share (and it lasts) */
+  standTallerBand: 0.03,
+  /** … and follows slow drift within this share */
+  standDriftBand: 0.015,
+  /** hips must stay below the rest level this long to count as an attempt */
+  attemptMs: 100,
+  /** frames an attempt start / "came back up" must hold (≈0.1 s at 30 fps) */
   holdFrames: 3,
+  /** frames for reaching the bottom / standing up (shorter: fast reps touch them briefly) */
+  edgeFrames: 2,
+  /** smoothing for the hip drop (0..1, higher = less smoothing) */
+  dropAlpha: 0.6,
   /** torso lean above this = back collapsing forward (bad for the lower back) */
   maxLean: 65,
   /** a controlled squat takes at least this long (from leaving the standing position) */
@@ -191,9 +214,24 @@ export class SquatCounter implements Counter<SquatFrame> {
   private minKnee = 180;
   private maxDrop = 0;
   private maxLean = 0;
+  /** smoothed hip drop */
+  private drop: number | null = null;
+  /** hip drop while resting at the top between reps (see update) */
+  private rest: number | null = null;
+  /** since when the hips are below the rest level (attempt detection) */
+  private belowSince: number | null = null;
+  /** since when the athlete looks clearly taller than the rest level (+ running average) */
+  private tallerSince: number | null = null;
+  private tallerSum = 0;
+  private tallerN = 0;
+  /** the standing height is averaged until this time */
+  private learnUntil = 0;
+  /** since when the athlete stands clearly taller than the learned standing height */
+  private standTallerSince: number | null = null;
   private readonly startDeb = new Debounce(SQUAT_RULES.holdFrames);
-  private readonly downDeb = new Debounce(SQUAT_RULES.holdFrames);
-  private readonly upDeb = new Debounce(SQUAT_RULES.holdFrames);
+  private readonly backDeb = new Debounce(SQUAT_RULES.holdFrames);
+  private readonly downDeb = new Debounce(SQUAT_RULES.edgeFrames);
+  private readonly upDeb = new Debounce(SQUAT_RULES.edgeFrames);
 
   /** Locks onto one leg; switches only if the other one is clearly better for a while. */
   private pickSide(f: SquatFrame): SideData | null {
@@ -220,6 +258,8 @@ export class SquatCounter implements Counter<SquatFrame> {
     this.maxDrop = 0;
     this.maxLean = 0;
     this.downDeb.reset();
+    this.backDeb.reset();
+    this.startDeb.reset();
   }
 
   update(f: SquatFrame, t: number): RepUpdate {
@@ -234,11 +274,27 @@ export class SquatCounter implements Counter<SquatFrame> {
     // ----- learn the standing height and the athlete's spot -----
     const standingNow = knee > R.upAngle && this.phase === 'up' && this.repStart == null;
     if (standingNow) {
-      // Learn quickly upwards (stood up taller), but only VERY slowly downwards and only
-      // within ~2%: otherwise a slow 4–5 cm dip would be learned as "the new standing
-      // height" and never seen as an attempt.
-      if (this.standH == null || h >= this.standH) this.standH = this.standH == null ? h : this.standH + 0.3 * (h - this.standH);
-      else if (h > this.standH * 0.98) this.standH += 0.05 * (h - this.standH);
+      // Standing hip height = the AVERAGE over the first second of standing (jitter cancels
+      // out — taking the highest frames made normal standing look like a small squat).
+      // Later it only follows tiny drift, or a clearly taller stance that LASTS. Never a
+      // dip: a slow 4 cm mini squat must not become "the new standing height".
+      if (this.standH == null) {
+        this.standH = h;
+        this.learnUntil = t + R.standLearnMs;
+      } else if (t < this.learnUntil) {
+        // average only frames that look like standing (an athlete who starts squatting
+        // right after "3-2-1" must not have the start of the squat learned as standing)
+        if (h > this.standH * 0.99) this.standH += 0.15 * (h - this.standH);
+      } else if (h > this.standH * (1 + R.standTallerBand)) {
+        this.standTallerSince ??= t;
+        if (t - this.standTallerSince >= R.restResetMs) {
+          this.standH = h;
+          this.standTallerSince = null;
+        }
+      } else {
+        this.standTallerSince = null;
+        if (Math.abs(h / this.standH - 1) < R.standDriftBand) this.standH += 0.02 * (h - this.standH);
+      }
     }
     if (this.standH == null) return { counted: false, hint: null }; // wait for a first standing frame
     if (this.refX == null || this.refH == null) {
@@ -256,53 +312,91 @@ export class SquatCounter implements Counter<SquatFrame> {
         this.refX = f.ankleX;
         this.refH = this.standH;
         this.outSince = null;
+        this.rest = null;
       } else {
         this.phase = 'up';
         this.resetRep();
+        this.rest = null;
         return { counted: false, hint: 'place' };
       }
     } else {
       this.outSince = null;
     }
 
-    const drop = 1 - h / this.standH; // 0 standing, ~0.4–0.5 at parallel
-    if (this.phase === 'up' && knee > R.upAngle && drop < R.upDrop) this.lastTopAt = t;
+    // hip drop (0 standing, ~0.4–0.5 at parallel), lightly smoothed against jitter
+    const rawDrop = 1 - h / this.standH;
+    this.drop = this.drop == null ? rawDrop : this.drop + R.dropAlpha * (rawDrop - this.drop);
+    const drop = this.drop;
 
-    // ----- a rep attempt starts once the hips really go down -----
-    const started = this.startDeb.feed(drop > R.startDrop);
-    if (this.repStart == null && started && t - this.lastCountAt > R.restMs) {
-      this.repStart = this.lastTopAt ?? t;
-      this.minKnee = knee;
-      this.maxDrop = drop;
-      this.maxLean = sd.lean;
-    }
-    if (this.repStart != null) {
+    const deep = (knee < R.downAngle && drop >= R.minDrop) || drop >= R.deepDrop;
+    // "stood up": hips back near the top. Knees may stay a bit bent — tired athletes
+    // rarely lock out fully late in a long set (the cause of 20/22 on a real phone).
+    const standing = drop <= R.upDrop && knee > R.upAngle;
+
+    if (this.phase === 'up') {
+      // Rest level = how this athlete stands between reps right now (may be a bit
+      // below a perfect lock-out). Attempts / "a bit lower" are measured from it, so
+      // jitter around an imperfect top never looks like an attempt.
+      if (this.repStart == null) {
+        // slow average of the resting hip height (jitter cancels out); drops quickly
+        // only when the athlete clearly stands taller
+        if (this.rest == null) this.rest = drop;
+        if (drop < this.rest - R.restBand) {
+          // clearly taller — but trust it only if it lasts, and take the AVERAGE of that
+          // period (a single low jitter frame would make normal jitter look like an attempt)
+          if (this.tallerSince == null) {
+            this.tallerSince = t;
+            this.tallerSum = 0;
+            this.tallerN = 0;
+          }
+          this.tallerSum += drop;
+          this.tallerN += 1;
+          if (t - this.tallerSince >= R.restResetMs) {
+            this.rest = this.tallerSum / this.tallerN;
+            this.tallerSince = null;
+          }
+        } else {
+          this.tallerSince = null;
+          if (Math.abs(drop - this.rest) < R.restCreepBand) this.rest += R.restAlpha * (drop - this.rest);
+        }
+        if (knee > R.upAngle && drop <= R.upDrop) this.lastTopAt = t;
+      }
+      const rest = this.rest ?? 0;
+      // an attempt = hips below the rest level for at least `attemptMs` (time, not frames,
+      // so slow and fast phones behave the same)
+      const below = this.repStart == null && drop - rest > R.startDrop && t - this.lastCountAt > R.restMs;
+      if (below) this.belowSince ??= t;
+      else this.belowSince = null;
+      if (this.repStart == null) {
+        if (this.belowSince == null || t - this.belowSince < R.attemptMs) return { counted: false, hint: null };
+        this.belowSince = null;
+        this.repStart = this.lastTopAt ?? t;
+        this.minKnee = knee;
+        this.maxDrop = drop;
+        this.maxLean = sd.lean;
+        this.backDeb.reset();
+      }
       this.minKnee = Math.min(this.minKnee, knee);
       this.maxDrop = Math.max(this.maxDrop, drop);
       this.maxLean = Math.max(this.maxLean, sd.lean);
-    }
-
-    const deep = (knee < R.downAngle && drop >= R.minDrop) || drop >= R.deepDrop;
-    const standing = knee > R.upAngle && drop < R.upDrop;
-    // back (almost) where the attempt started — used to spot shallow "mini squats"
-    const backUp = knee > R.upAngle && drop < R.startDrop / 2;
-
-    if (this.phase === 'up') {
-      if (this.repStart == null) return { counted: false, hint: null };
       if (this.downDeb.feed(deep)) {
         this.phase = 'down';
         this.upDeb.reset();
-      } else if (this.upDeb.feed(backUp)) {
-        // went partway down and stood up again: not deep enough
+      } else if (this.backDeb.feed(drop - rest < R.startDrop / 2)) {
+        // came back up without reaching the bottom: a real shallow squat → "a bit lower";
+        // a tiny wobble (jitter) → ended silently
+        const realDip = this.maxDrop - rest >= R.lowerHintMin;
         this.resetRep();
-        this.upDeb.reset();
         this.lastCountAt = t; // short rest before the next attempt, no double hints
-        return { counted: false, hint: 'lower' };
+        return { counted: false, hint: realDip ? 'lower' : null };
       }
       return { counted: false, hint: null };
     }
 
-    // ----- phase 'down': wait until really standing again -----
+    // ----- phase 'down': track the bottom, wait until standing again -----
+    this.minKnee = Math.min(this.minKnee, knee);
+    this.maxDrop = Math.max(this.maxDrop, drop);
+    this.maxLean = Math.max(this.maxLean, sd.lean);
     if (!this.upDeb.feed(standing)) return { counted: false, hint: null };
 
     const duration = t - (this.repStart ?? t);
@@ -311,6 +405,7 @@ export class SquatCounter implements Counter<SquatFrame> {
     this.phase = 'up';
     this.resetRep();
     this.upDeb.reset();
+    this.rest = drop; // new rest level = where the athlete stood up to
     this.lastCountAt = t;
 
     if (lean > R.maxLean) return { counted: false, hint: 'chest' };
