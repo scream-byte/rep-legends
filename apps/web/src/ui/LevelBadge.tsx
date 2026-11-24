@@ -1,6 +1,7 @@
 // Player level badge: a bevelled shield that evolves with the level (user's design 2026-11-24).
-//   * every MILESTONE (10, 25, 50, 75, 100) gives the frame a new colour and one more
-//     stacked plate behind the shield (steel → teal → blue → purple → red → gold);
+//   * every MILESTONE (10, 25, 50, 75, 100) gives the frame a new colour
+//     (steel → teal → blue → purple → red → gold). No stacked plates behind the shield —
+//     the user found them cheap-looking (2026-11-24);
 //   * every LEVEL inside a milestone adds one more Art Deco ornament (pips, corner
 //     brackets, rays, crown, wings, gems…); ornaments start over at the next milestone.
 // Pure SVG, drawn in the project's style (thick dark outline, lit bevel facets).
@@ -23,25 +24,23 @@ interface Palette {
   strip: string;
   /** ornament colour (light) */
   deco: string;
-  /** stacked plates behind */
-  plate: string;
   /** small diamond pips */
   pip: string;
 }
 
 const PALETTES: Palette[] = [
   // 1–9 steel
-  { base: '#56657f', top: '#c9d4ea', corner: '#eef3ff', left: '#a3b2cc', right: '#7d8cab', strip: '#b4c1db', deco: '#dfe8fb', plate: '#3c4762', pip: '#ffe7a6' },
+  { base: '#56657f', top: '#c9d4ea', corner: '#eef3ff', left: '#a3b2cc', right: '#7d8cab', strip: '#b4c1db', deco: '#dfe8fb', pip: '#ffe7a6' },
   // 10–24 teal
-  { base: '#17786a', top: '#8af0d8', corner: '#d8fff4', left: '#4fd2b6', right: '#2a9f88', strip: '#5fdcc1', deco: '#b9fbe9', plate: '#0f564c', pip: '#ffe7a6' },
+  { base: '#17786a', top: '#8af0d8', corner: '#d8fff4', left: '#4fd2b6', right: '#2a9f88', strip: '#5fdcc1', deco: '#b9fbe9', pip: '#ffe7a6' },
   // 25–49 blue
-  { base: '#2147a8', top: '#a3c6ff', corner: '#e2eeff', left: '#6a9cfa', right: '#3c6ee0', strip: '#7aa8ff', deco: '#cfe2ff', plate: '#17337a', pip: '#ffe7a6' },
+  { base: '#2147a8', top: '#a3c6ff', corner: '#e2eeff', left: '#6a9cfa', right: '#3c6ee0', strip: '#7aa8ff', deco: '#cfe2ff', pip: '#ffe7a6' },
   // 50–74 purple
-  { base: '#5a2aa3', top: '#d6b8ff', corner: '#f3e8ff', left: '#a979f5', right: '#7c48d6', strip: '#b48cf7', deco: '#ead9ff', plate: '#3f1d74', pip: '#ffe7a6' },
+  { base: '#5a2aa3', top: '#d6b8ff', corner: '#f3e8ff', left: '#a979f5', right: '#7c48d6', strip: '#b48cf7', deco: '#ead9ff', pip: '#ffe7a6' },
   // 75–99 red
-  { base: '#a3302b', top: '#ffb8ab', corner: '#ffe6e0', left: '#f27b6f', right: '#d24c43', strip: '#f58a7e', deco: '#ffd6cf', plate: '#76211e', pip: '#ffe7a6' },
+  { base: '#a3302b', top: '#ffb8ab', corner: '#ffe6e0', left: '#f27b6f', right: '#d24c43', strip: '#f58a7e', deco: '#ffd6cf', pip: '#ffe7a6' },
   // 100+ gold
-  { base: '#a8680c', top: '#ffe48a', corner: '#fff8d6', left: '#ffc93f', right: '#e69a1c', strip: '#ffcf55', deco: '#fff0b3', plate: '#7a4b08', pip: '#8ff0ff' },
+  { base: '#a8680c', top: '#ffe48a', corner: '#fff8d6', left: '#ffc93f', right: '#e69a1c', strip: '#ffcf55', deco: '#fff0b3', pip: '#8ff0ff' },
 ];
 
 // Shield (outer) and its face (inner), in a 100×110 box.
@@ -177,12 +176,12 @@ function ornament(i: number, p: Palette): ReactNode {
 const pipCount = (n: number) => (n >= 12 ? 5 : n >= 11 ? 4 : Math.min(3, n));
 
 export function LevelBadge({ level, label, size = 50 }: { level: number; label: string; size?: number }) {
-  // `size` = width of the shield itself in px; the SVG is larger to fit plates & ornaments.
+  // `size` = width of the shield itself in px; the SVG is larger to fit the ornaments.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const { tier, ornaments } = badgeStage(level);
   const p = PALETTES[tier];
   const digits = String(level).length;
-  // view box: shield 0…100 × 0…110 plus margins for plates and ornaments
+  // view box: shield 0…100 × 0…110 plus margins for ornaments
   const vb = { x: -32, y: -30, w: 164, h: 168 };
   const scale = size / 100;
   const glow = ornaments >= ORNAMENT_COUNT;
@@ -214,19 +213,6 @@ export function LevelBadge({ level, label, size = 50 }: { level: number; label: 
 
       {/* a soft glow once a tier is complete */}
       {glow && <path d={OUTER} fill={p.deco} opacity="0.75" filter={`url(#lb-glow-${uid})`} />}
-
-      {/* stacked plates behind: one more for every milestone reached */}
-      {Array.from({ length: tier }, (_, i) => tier - i).map((k) => (
-        <path
-          key={k}
-          d={OUTER}
-          transform={`translate(${-5 * k} ${4 * k})`}
-          fill={k % 2 ? p.plate : p.right}
-          stroke={INK}
-          strokeWidth="4"
-          strokeLinejoin="round"
-        />
-      ))}
 
       {/* ornaments that sit behind the shield (wings, rays, brackets, second outline) */}
       {shown.map((i) => (
