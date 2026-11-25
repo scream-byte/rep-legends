@@ -62,6 +62,11 @@ check('player level grows from all XP (85.5 XP → level 2)', heroLevel(s5.progr
 const sq = applySet(s5.progress, { exercise: 'squat', score: 12, recordKey: 'squat', now: 7 }, PHONE);
 check('12 squats → +12 Endurance XP, Endurance level 2', sq.stat === 'endurance' && sq.xpGained === 12 && sq.statLevelAfter === 2 && sq.newRecord);
 check('squat totals counted separately', totals(sq.progress).squatReps === 12 && totals(sq.progress).pushupReps === 35);
+{
+  const ab = applySet(emptyProgress(), { exercise: 'abs', score: 20, recordKey: 'abs' }, 'phoneA1234');
+  check('abs: +1 Defense XP per sit-up, own counter and record', ab.stat === 'defense' && ab.xpGained === 20 && totals(ab.progress).absReps === 20 && ab.progress.records.abs === 20);
+}
+check('an older save without absReps still loads (reads as 0)', totals(sanitize({ dev: { oldphone11: { xp: { attack: 5 }, pushupReps: 5, sets: 1 } } })).absReps === 0);
 check('an older save without squatReps still loads (reads as 0)', totals(sanitize({ dev: { oldphone11: { xp: { attack: 5 }, pushupReps: 5, sets: 1 } } })).squatReps === 0);
 
 // ---------- saves can never lose data ----------

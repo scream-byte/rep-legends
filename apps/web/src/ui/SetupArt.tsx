@@ -6,7 +6,44 @@ const INK = '#1b1d4a';
 export function SetupArt({ exercise }: { exercise: ExerciseId }) {
   if (exercise === 'pullup') return <PullupArt />;
   if (exercise === 'squat') return <SquatArt />;
+  if (exercise === 'abs') return <AbsArt />;
   return <PushupArt />;
+}
+
+/** Phone on the floor; athlete lying side-on, knees bent: lying (faded) and torso up ~60°. */
+function AbsArt() {
+  return (
+    <svg className="setup-art" viewBox="0 0 300 140" aria-hidden>
+      <path d="M10 128 H290" stroke={INK} strokeWidth="4" strokeLinecap="round" />
+      {/* phone */}
+      <rect x="22" y="76" width="28" height="50" rx="5" fill="#fff" stroke={INK} strokeWidth="4" />
+      <circle cx="36" cy="84" r="3" fill={INK} />
+      {/* field of view */}
+      <path d="M50 90 L290 40 M50 90 L290 128" stroke="#5cc8ff" strokeWidth="3" strokeDasharray="6 6" />
+      {/* distance */}
+      <path d="M56 134 H150 M56 131 v6 M150 131 v6" stroke={INK} strokeWidth="2" />
+      <text x="103" y="124" textAnchor="middle" fontSize="11" fontWeight="800" fill={INK}>
+        2–3 m
+      </text>
+      {/* lying (start / bottom position), faded */}
+      <g opacity="0.3" stroke={INK} strokeWidth="6" strokeLinecap="round" fill="none">
+        <path d="M218 122 L172 122" />
+      </g>
+      <circle cx="160" cy="119" r="9" fill="#ff8a1f" opacity="0.3" />
+      {/* torso up about 60°, knees bent, feet on the floor */}
+      <g stroke={INK} strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none">
+        <path d="M218 122 L194 80" stroke="#ff8a1f" />
+        <path d="M218 122 L248 94 L266 124 L278 124" />
+        <path d="M198 88 L214 96" />
+      </g>
+      <circle cx="188" cy="69" r="10" fill="#ff8a1f" stroke={INK} strokeWidth="4" />
+      {/* "about 60°" mark */}
+      <path d="M186 122 A32 32 0 0 1 202 94" stroke="#3fd06a" strokeWidth="3" strokeDasharray="4 3" fill="none" />
+      <text x="228" y="76" textAnchor="middle" fontSize="10" fontWeight="800" fill="#2f9e55">
+        ≈ 60°
+      </text>
+    </svg>
+  );
 }
 
 /** Phone on the floor; athlete side-on, shown standing (faded) and at the bottom of a squat. */

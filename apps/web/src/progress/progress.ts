@@ -22,6 +22,8 @@ export interface Counters {
   pullupPoints: number;
   /** added in stage 3; older saves simply read as 0 */
   squatReps: number;
+  /** added in stage 4 (abs); older saves simply read as 0 */
+  absReps: number;
   sets: number;
 }
 
@@ -40,6 +42,7 @@ export const emptyCounters = (): Counters => ({
   pushupReps: 0,
   pullupPoints: 0,
   squatReps: 0,
+  absReps: 0,
   sets: 0,
 });
 
@@ -66,6 +69,7 @@ function sanitizeCounters(raw: unknown): Counters {
   c.pushupReps = num(r.pushupReps);
   c.pullupPoints = num(r.pullupPoints);
   c.squatReps = num(r.squatReps);
+  c.absReps = num(r.absReps);
   c.sets = num(r.sets);
   return c;
 }
@@ -90,6 +94,7 @@ function mergeCounters(a: Counters, b: Counters): Counters {
   for (const k of STAT_KEYS) c.xp[k] = Math.max(a.xp[k], b.xp[k]);
   c.pushupReps = Math.max(a.pushupReps, b.pushupReps);
   c.squatReps = Math.max(a.squatReps, b.squatReps);
+  c.absReps = Math.max(a.absReps, b.absReps);
   c.pullupPoints = Math.max(a.pullupPoints, b.pullupPoints);
   c.sets = Math.max(a.sets, b.sets);
   return c;
@@ -124,6 +129,7 @@ export function totals(p: Progress): Counters {
     for (const k of STAT_KEYS) t.xp[k] = r1(t.xp[k] + c.xp[k]);
     t.pushupReps = r1(t.pushupReps + c.pushupReps);
     t.squatReps = r1(t.squatReps + c.squatReps);
+    t.absReps = r1(t.absReps + c.absReps);
     t.pullupPoints = r1(t.pullupPoints + c.pullupPoints);
     t.sets += c.sets;
   }
@@ -173,11 +179,12 @@ export const heroLevel = (p: Progress) => levelFrom(totalXp(p), heroXpToNext);
 export const XP_RULES = {
   pushup: { stat: 'attack' as StatKey, perRep: 1 },
   squat: { stat: 'endurance' as StatKey, perRep: 1 },
+  abs: { stat: 'defense' as StatKey, perRep: 1 },
   pullup: { stat: 'strength' as StatKey, perPoint: { easy: 2, medium: 3, hard: 4 } },
 };
 
 export interface SetInput {
-  exercise: 'pushup' | 'pullup' | 'squat';
+  exercise: 'pushup' | 'pullup' | 'squat' | 'abs';
   /** pull-up difficulty (ignored for push-ups) */
   difficulty?: 'easy' | 'medium' | 'hard';
   /** reps / points scored in the set (may be fractional) */
@@ -203,6 +210,7 @@ export function xpForSet(input: SetInput): { stat: StatKey; xp: number } {
   const score = num(input.score);
   if (input.exercise === 'pushup') return { stat: XP_RULES.pushup.stat, xp: r1(score * XP_RULES.pushup.perRep) };
   if (input.exercise === 'squat') return { stat: XP_RULES.squat.stat, xp: r1(score * XP_RULES.squat.perRep) };
+  if (input.exercise === 'abs') return { stat: XP_RULES.abs.stat, xp: r1(score * XP_RULES.abs.perRep) };
   const per = XP_RULES.pullup.perPoint[input.difficulty ?? 'medium'];
   return { stat: XP_RULES.pullup.stat, xp: r1(score * per) };
 }
@@ -219,6 +227,7 @@ export function applySet(p: Progress, input: SetInput, deviceId: string): SetOut
   c.xp[stat] = r1(c.xp[stat] + xp);
   if (input.exercise === 'pushup') c.pushupReps = r1(c.pushupReps + score);
   else if (input.exercise === 'squat') c.squatReps = r1(c.squatReps + score);
+  else if (input.exercise === 'abs') c.absReps = r1(c.absReps + score);
   else c.pullupPoints = r1(c.pullupPoints + score);
   if (score > 0) c.sets += 1;
   next.dev[deviceId] = c;

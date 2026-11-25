@@ -1,6 +1,7 @@
 // Registry of playable exercises (each one is an arena).
 import { makePullupExercise, type PullupOptions } from './pullup.ts';
 import { pushupExercise } from './pushup.ts';
+import { absExercise } from './abs.ts';
 import { squatExercise } from './squat.ts';
 import type { ArenaId, BaseFrame, ExerciseDef, ExerciseId } from './types.ts';
 
@@ -11,7 +12,12 @@ export interface ExerciseVariant {
 
 /** Builds the exercise definition for a set, applying the chosen variant. */
 export function getExercise(id: ExerciseId, variant: ExerciseVariant = {}): ExerciseDef<BaseFrame> {
-  const def = id === 'pullup' ? makePullupExercise(variant.pullup) : id === 'squat' ? squatExercise : pushupExercise;
+  const def = id === 'pullup' ? makePullupExercise(variant.pullup) 
+      : id === 'squat'
+        ? squatExercise
+        : id === 'abs'
+          ? absExercise
+          : pushupExercise;
   return def as unknown as ExerciseDef<BaseFrame>;
 }
 
@@ -25,7 +31,7 @@ export const ARENAS: Array<{ id: ArenaId; stat: 'attack' | 'strength' | 'enduran
   { id: 'pushup', stat: 'attack', playable: true },
   { id: 'pullup', stat: 'strength', playable: true },
   { id: 'squat', stat: 'endurance', playable: true },
-  { id: 'abs', stat: 'defense', playable: false },
+  { id: 'abs', stat: 'defense', playable: true },
 ];
 
 export type { ArenaId, ExerciseId } from './types.ts';
