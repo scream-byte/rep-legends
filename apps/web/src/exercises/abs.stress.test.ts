@@ -1,6 +1,6 @@
 // Stress test for the sit-up counter: hundreds of random, REALISTIC sets — varying pace
 // and height, fatigue (lower tops, slower reps, head stays a bit raised between reps),
-// pauses, MediaPipe jitter and glitches, 15–30 fps with uneven frame times.
+// elbows-to-knees (torso past 90°), bent knees with leg noise, pauses, MediaPipe jitter and glitches, 15–30 fps with uneven frame times.
 // The count must be EXACT in every set (same standard as squats). Run with: npm test
 import { AbsCounter, type AbsFrame } from './abs.ts';
 
@@ -13,9 +13,9 @@ function rng(seed: number) {
 }
 const gauss = (r: () => number) => Math.sqrt(-2 * Math.log(r() + 1e-12)) * Math.cos(2 * Math.PI * r());
 
-function frame(torso: number, hipX: number, len: number, otherTorso: number): AbsFrame {
-  const side = (vis: number, tor: number) => ({ vis, torso: Math.max(0, tor), knee: 80, torsoLen: len, hip: { x: hipX, y: 520 }, points: [] });
-  return { visible: true, side: 'left', torso, knee: 80, sides: { left: side(0.9, torso), right: side(0.7, otherTorso) }, points: null, lines: [], debug: '' };
+function frame(torso: number, hipX: number, len: number, otherTorso: number, knee: number, otherKnee: number): AbsFrame {
+  const side = (vis: number, tor: number, k: number) => ({ vis, torso: Math.max(0, tor), knee: k, torsoLen: len, hip: { x: hipX, y: 520 }, points: [] });
+  return { visible: true, side: 'left', torso, knee, sides: { left: side(0.9, torso, knee), right: side(0.7, otherTorso, otherKnee) }, points: null, lines: [], debug: '' };
 }
 
 interface SetResult {
@@ -32,11 +32,16 @@ function simulate(seed: number, reps: number, o: { fpsMin: number; fpsMax: numbe
   const fpsBase = o.fpsMin + (o.fpsMax - o.fpsMin) * r();
   const hipX = 300 + 20 * gauss(r);
   const restBase = 3 + 10 * r(); // how this athlete lies: flat … head a bit raised
+  const kneeBase = 75 + 50 * r();
+  const toKnees = r() < 0.35; // this athlete touches the knees with the elbows (torso past 90°)
 
   const emit = (torso: number) => {
     let a = torso + o.noise * 2 * gauss(r);
     if (r() < o.spikes) a += (r() < 0.5 ? -1 : 1) * (20 + 30 * r()); // MediaPipe glitch
-    const u = c.update(frame(Math.max(0, a), hipX + 3 * gauss(r), 150 + 3 * gauss(r), a + 5 * gauss(r)), t);
+    // knees bent (75–135° by athlete), far leg noisier, occasional "straight leg" glitch
+    let far = kneeBase + 8 + 10 * o.noise * gauss(r);
+    if (r() < o.spikes) far = 170 + 10 * r();
+    const u = c.update(frame(Math.max(0, a), hipX + 3 * gauss(r), 150 + 3 * gauss(r), a + 5 * gauss(r), kneeBase + 4 * o.noise * gauss(r), far), t);
     if (u.hint && u.hint !== 'lost') hints.push(u.hint);
     t += 1000 / (fpsBase * (0.85 + 0.3 * r()));
   };
@@ -58,7 +63,7 @@ function simulate(seed: number, reps: number, o: { fpsMin: number; fpsMax: numbe
     const fatigue = i / Math.max(1, reps - 1);
     const up = 450 + 700 * r() + 500 * fatigue;
     const down = 400 + 700 * r() + 400 * fatigue;
-    const top = 66 + 22 * r() - 4 * fatigue; // just past half-way … to the knees
+    const top = toKnees ? 100 + 25 * r() : 66 + 22 * r() - 4 * fatigue; // half-way … upright … elbows to knees
     const bottom = restBase + 6 * r() * fatigue; // tired: head / shoulders stay a little up
     const pauseTop = r() < 0.3 ? 400 * r() : 0;
     const pauseBottom = r() < 0.6 ? 800 * r() : 0;

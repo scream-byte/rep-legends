@@ -4,17 +4,17 @@ import { absCalibrationHint, AbsCounter, measureAbs, type AbsFrame, type AbsSide
 
 const FPS = 30;
 
-type Opts = { knee?: number; vis?: number; otherVis?: number; otherTorso?: number; hipX?: number; len?: number };
+type Opts = { knee?: number; otherKnee?: number | null; vis?: number; otherVis?: number; otherTorso?: number; hipX?: number; hipY?: number; len?: number };
 /** A frame with the given torso angle off the floor (degrees). */
 const frame = (torso: number, o: Opts = {}): AbsFrame => {
   const len = o.len ?? 150;
-  const side = (vis: number, tor: number): AbsSideData => ({ vis, torso: tor, knee: o.knee ?? 80, torsoLen: len, hip: { x: o.hipX ?? 300, y: 520 }, points: [] });
+  const side = (vis: number, tor: number, knee: number | null): AbsSideData => ({ vis, torso: tor, knee, torsoLen: len, hip: { x: o.hipX ?? 300, y: o.hipY ?? 520 }, points: [] });
   return {
     visible: true,
     side: 'left',
     torso,
     knee: o.knee ?? 80,
-    sides: { left: side(o.vis ?? 0.95, torso), right: side(o.otherVis ?? 0.7, o.otherTorso ?? torso + 4) },
+    sides: { left: side(o.vis ?? 0.95, torso, o.knee ?? 80), right: side(o.otherVis ?? 0.7, o.otherTorso ?? torso + 4, o.otherKnee === undefined ? (o.knee ?? 80) + 6 : o.otherKnee) },
     points: null,
     lines: [],
     debug: '',
@@ -111,6 +111,47 @@ const newSpot = [
 ];
 run('lay down at a new spot and stayed → counts again', newSpot, 1, (h) => h.includes('place'));
 
+// ---------- the user's real test (2026-11-25) ----------
+{
+  // 4 sit-ups, then sat up once more only to stand up and take the phone
+  const getUp = [
+    ...situp(900, 85).slice(0, 14), // rising to ~85°
+    ...Array.from({ length: 30 }, (_, i) => frame(85 + 20 * Math.sin((Math.PI * i) / 29), { hipY: 520 - 260 * (i / 29) })), // leans forward, hips go up
+    ...Array.from({ length: 40 }, () => frame(90, { hipY: 260 })), // standing
+  ];
+  const c = new AbsCounter();
+  let tm = 1000;
+  for (const f of [...lie(), ...times(4, () => [...situp(1800), ...lie(4)]), ...getUp]) {
+    c.update(f, tm);
+    tm += 1000 / FPS;
+  }
+  const ok = c.reps === 4;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  abs: 4 sit-ups, then sat up to stand and take the phone → 4 (was 5): reps=${c.reps}`);
+  if (!ok) failed = true;
+}
+// elbows to the knees: the torso leans PAST upright (110–120°) and comes back
+const elbowsToKnees = (ms = 2200, over = 118) => {
+  const n = Math.round((ms / 1000) * FPS);
+  return Array.from({ length: n }, (_, i) => frame(8 + (over - 8) * ((1 - Math.cos((2 * Math.PI * i) / n)) / 2)));
+};
+run('10 sit-ups touching elbows to knees (torso past 90°) → 10, no "lie down!"', times(10, () => [...elbowsToKnees(), ...lie(4)]), 10);
+run('elbows to knees with a pause at the knees (1 s) → 1', [...elbowsToKnees().slice(0, 33), ...Array.from({ length: 30 }, () => frame(118)), ...elbowsToKnees().slice(33)], 1);
+run('sat up and stayed at the top 2.5 s, then lay down → 1', [...situp(1800).slice(0, 27), ...Array.from({ length: 75 }, () => frame(75)), ...situp(1800).slice(27)], 1);
+run('20 sit-ups with 2-frame glitches down to 15° at the top → no double counts', times(20, () => [...situp(1800, 90, 8, (i, f) => (i === 27 || i === 28 ? frame(15) : f)), ...lie(4)]), 20);
+// legs
+const withKnees = (seq: AbsFrame[], knee: number, otherKnee: number | null) => seq.map((f) => frame(f.torso!, { knee, otherKnee }));
+run('one leg bent, the other straight on the floor → NOT counted, "bend both knees"', withKnees(times(3, () => [...situp(1800), ...lie(4)]), 80, 172), 0, ['knees', 'knees', 'knees']);
+run('the near leg straight, far leg bent → NOT counted', withKnees(situp(1800), 170, 85), 0, ['knees']);
+run(
+  'one leg straight, MediaPipe swaps the legs every few frames → still NOT counted',
+  situp(1800).map((f, i) => (i % 8 < 4 ? frame(f.torso!, { knee: 80, otherKnee: 172 }) : frame(f.torso!, { knee: 172, otherKnee: 80 }))),
+  0,
+  ['knees'],
+);
+run('far leg hidden (no knee angle), near leg bent → counts', withKnees(times(3, () => [...situp(1800), ...lie(4)]), 85, null), 3);
+run('both knees bent at ~100–135° (feet far away) → counts', withKnees(times(3, () => [...situp(1800), ...lie(4)]), 135, 128), 3);
+run('a straight-leg glitch on a few frames → still counts', times(3, () => [...situp(1800).map((f, i) => (i % 9 === 4 ? frame(f.torso!, { otherKnee: 175 }) : f)), ...lie(4)]), 3);
+
 // ---------- measureAbs on synthetic landmarks (480x640 portrait) ----------
 function body(o: { shX: number; shY: number; kneeX: number; kneeY: number; ankX?: number; vis?: number }) {
   const lms = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.2 }));
@@ -134,6 +175,19 @@ const sitting = measureAbs(body({ shX: 0.45, shY: 0.55, kneeX: 0.68, kneeY: 0.7 
 check('sitting at calibration → "lie down"', absCalibrationHint(sitting) === 'lieDown', `${sitting.debug} → ${absCalibrationHint(sitting)}`);
 const straight = measureAbs(body({ shX: 0.15, shY: 0.79, kneeX: 0.68, kneeY: 0.805, ankX: 0.85 }), 480, 640);
 check('legs straight → "bend your knees"', absCalibrationHint(straight) === 'bendKnees', `${straight.debug} → ${absCalibrationHint(straight)}`);
+const over = measureAbs(body({ shX: 0.62, shY: 0.62, kneeX: 0.68, kneeY: 0.7 }), 480, 640);
+check('elbows to knees (shoulders past the hips) → torso > 90°, not "lying"', (over.torso ?? 0) > 100, over.debug);
+const mirrored = measureAbs(body({ shX: 0.85, shY: 0.79, kneeX: 0.32, kneeY: 0.7, ankX: 0.2 }), 480, 640);
+check('lying the other way round (head on the right) → torso ≈ 0°', (mirrored.torso ?? 99) < 10 && absCalibrationHint(mirrored) === 'hold', mirrored.debug);
+const oneStraight = (() => {
+  const lms = body({ shX: 0.15, shY: 0.79, kneeX: 0.68, kneeY: 0.7 });
+  lms[12] = { x: 0.15, y: 0.785, visibility: 0.9 };
+  lms[24] = { x: 0.5, y: 0.8, visibility: 0.9 };
+  lms[26] = { x: 0.68, y: 0.805, visibility: 0.9 }; // right leg straight on the floor
+  lms[28] = { x: 0.86, y: 0.81, visibility: 0.9 };
+  return measureAbs(lms, 480, 640);
+})();
+check('calibration: one leg straight → "bend your knees"', absCalibrationHint(oneStraight) === 'bendKnees', oneStraight.debug);
 const hidden = measureAbs(body({ shX: 0.15, shY: 0.79, kneeX: 0.68, kneeY: 0.7, vis: 0.3 }), 480, 640);
 check('body not visible → "not visible"', absCalibrationHint(hidden) === 'notVisible', hidden.debug);
 

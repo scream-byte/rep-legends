@@ -160,7 +160,7 @@ export const en: typeof ru = {
       setup: [
         'Stand the phone upright on the floor or a low support 2–3 m away, screen facing you.',
         'Lie on your back SIDE-ON to the phone so the camera sees your torso rise. Shoulders, hips and knees must be in the frame.',
-        'Knees bent, feet on the floor (you can hook your feet under something).',
+        "BOTH knees bent, feet on the floor (you can hook your feet under something). A rep with a straight leg doesn't count.",
         'Raise your torso at least about half-way to sitting — that counts as a rep. No need to touch your knees.',
         'Lower until your shoulder blades almost touch the floor, then go again.',
         "Hands on your chest or by your temples, don't pull on your neck. Move smoothly, no jerking — it's safer for your back.",
@@ -168,12 +168,13 @@ export const en: typeof ru = {
       calibrate: {
         notVisible: 'I need to see your shoulders, hips and knees — lie side-on to the phone',
         lieDown: 'Lie on your back',
-        bendKnees: 'Bend your knees, feet on the floor',
+        bendKnees: 'Bend both knees, feet on the floor',
         hold: 'Great! Hold still…',
       } as Record<string, string>,
       hints: {
         higher: 'Higher!',
         down: 'Lie all the way down!',
+        knees: 'Bend both knees!',
         fast: 'Too fast! Smoother',
         lost: "Can't see you",
         place: 'Go back to your spot in front of the camera',

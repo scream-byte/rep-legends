@@ -9,8 +9,10 @@
 //   * attempts are measured from the athlete's own "rest level" (how they lie between
 //     reps, e.g. with a slightly raised head), learned as an AVERAGE, not from noise;
 //   * stay in place: shuffling to the phone and back must not count.
-// A rep counts at the TOP (torso up to ~60°), only if the previous bottom was a real
-// lie-down. "Moderate" standard: no need to touch the knees, safe for the lower back.
+// A rep reaches the TOP (torso up to ~60°) only if the previous bottom was a real lie-down
+// and both knees stayed bent; it is CONFIRMED when the athlete goes back down (or stays
+// at the top 2 s) — sitting up to stand up and take the phone doesn't count (user's test
+// 2026-11-25). "Moderate" standard: no need to touch the knees, safe for the lower back.
 
 import { angle, toPx, type Pt } from '../pose/geometry.ts';
 import type { BaseFrame, Counter, ExerciseDef, Landmark, RepRecord, RepUpdate } from './types.ts';
@@ -64,6 +66,15 @@ export const ABS_RULES = {
   reanchorMs: 2500,
   /** smoothing for the torso angle (0..1, higher = less smoothing) */
   emaAlpha: 0.5,
+  /** knees: a leg is "straight" above this angle; a rep with a straight leg in at least
+   *  `straightShare` of the frames (where legs were visible) doesn't count */
+  straightKnee: 150,
+  straightShare: 0.5,
+  /** a rep reached the top is CONFIRMED only when the athlete goes back down (below
+   *  `releaseAngle`) or stays in place at the top this long. Getting up to take the phone
+   *  (hips rise more than `getUpShift` torso lengths) cancels it. */
+  confirmMs: 2000,
+  getUpShift: 0.35,
 } as const;
 
 // BlazePose landmark indices per side
@@ -76,9 +87,11 @@ export type Side = keyof typeof SIDES;
 export interface AbsSideData {
   /** visibility of shoulder, hip, knee (min) */
   vis: number;
-  /** torso angle off the floor, degrees (0 lying flat, 90 sitting upright) */
+  /** torso angle off the floor, degrees: 0 lying flat, 90 sitting upright, MORE than 90
+   *  leaning forward to the knees (measured towards the knees, so "elbows to knees"
+   *  never looks like lying back down) */
   torso: number;
-  /** hip–knee–ankle angle (null if the ankle isn't visible) */
+  /** hip–knee–ankle angle of this leg (null if the knee or ankle isn't visible) */
   knee: number | null;
   /** shoulder–hip length in pixels (scale for the stay-in-place check) */
   torsoLen: number;
@@ -108,12 +121,15 @@ function sideData(lms: Landmark[], side: Side, w: number, h: number): AbsSideDat
   const v = (i: number) => lms[i].visibility ?? 0;
   const vis = Math.min(v(s.sh), v(s.hip), v(s.knee));
   const [sh, hip, knee, ank] = [s.sh, s.hip, s.knee, s.ank].map((i) => toPx(lms[i], w, h));
-  // screen y grows downwards: shoulders above the hips → positive angle
-  const torso = (Math.atan2(hip.y - sh.y, Math.max(1e-6, Math.abs(sh.x - hip.x))) * 180) / Math.PI;
+  // Lying, the shoulders are on the side AWAY from the knees. The angle is measured from
+  // that direction (0°) through upright (90°) to leaning over the knees (> 90°).
+  // Screen y grows downwards: shoulders above the hips → positive.
+  const back = knee.x >= hip.x ? -1 : 1; // direction from the hips towards the head when lying
+  const torso = (Math.atan2(hip.y - sh.y, (sh.x - hip.x) * back) * 180) / Math.PI;
   return {
     vis,
-    torso: Math.max(0, torso),
-    knee: v(s.ank) >= 0.4 ? angle(hip, knee, ank) : null,
+    torso: Math.min(180, Math.max(0, torso)),
+    knee: Math.min(v(s.knee), v(s.ank)) >= 0.4 ? angle(hip, knee, ank) : null,
     torsoLen: Math.max(1, Math.hypot(sh.x - hip.x, sh.y - hip.y)),
     hip,
     points: [sh, hip, knee, ank],
@@ -133,8 +149,16 @@ export function measureAbs(lms: Landmark[] | undefined, width: number, height: n
     sides,
     points: b.points,
     lines: ABS_LINES,
-    debug: `${best} · torso ${Math.round(b.torso)}° · knee ${b.knee == null ? '—' : Math.round(b.knee) + '°'}`,
+    debug: `${best} · torso ${Math.round(b.torso)}° · knees ${kneeText(sides.left.knee)}/${kneeText(sides.right.knee)}`,
   };
+}
+
+const kneeText = (k: number | null) => (k == null ? '—' : `${Math.round(k)}°`);
+
+/** The straightest visible knee in this frame (null if no leg is visible). */
+export function straightestKnee(f: AbsFrame): number | null {
+  const ks = [f.sides.left?.knee, f.sides.right?.knee].filter((k): k is number => k != null);
+  return ks.length ? Math.max(...ks) : null;
 }
 
 export type AbsCalibration = 'notVisible' | 'lieDown' | 'bendKnees' | 'hold';
@@ -143,12 +167,12 @@ export type AbsCalibration = 'notVisible' | 'lieDown' | 'bendKnees' | 'hold';
 export function absCalibrationHint(f: AbsFrame): AbsCalibration {
   if (!f.visible) return 'notVisible';
   if ((f.torso ?? 90) > ABS_RULES.startMaxTorso) return 'lieDown';
-  if (f.knee != null && f.knee > ABS_RULES.startMaxKnee) return 'bendKnees';
+  if ((straightestKnee(f) ?? 0) > ABS_RULES.startMaxKnee) return 'bendKnees'; // BOTH legs bent
   return 'hold';
 }
 
 /** Hint keys (texts live in i18n `exercises.abs.hints`). 'place' / 'lost' are lasting banners. */
-export type AbsHint = 'higher' | 'down' | 'fast' | 'lost' | 'place';
+export type AbsHint = 'higher' | 'down' | 'fast' | 'knees' | 'lost' | 'place';
 
 /** A condition that must hold for `n` frames in a row before it "fires". */
 class Debounce {
@@ -156,6 +180,10 @@ class Debounce {
   private readonly n: number;
   constructor(n: number) {
     this.n = n;
+  }
+  /** the condition is currently true (at least one frame) */
+  get active(): boolean {
+    return this.count > 0;
   }
   feed(cond: boolean): boolean {
     this.count = cond ? this.count + 1 : 0;
@@ -193,6 +221,11 @@ export class AbsCounter implements Counter<AbsFrame> {
   private refHip: Pt | null = null;
   private refLen: number | null = null;
   private outSince: number | null = null;
+  /** reached the top, waiting for confirmation (going back down / staying in place) */
+  private pending: { t: number; hip: Pt; len: number; rec: RepRecord } | null = null;
+  /** frames since the last top where a leg was visible / where a leg was straight */
+  private legFrames = 0;
+  private straightFrames = 0;
   private readonly upDeb = new Debounce(ABS_RULES.edgeFrames);
   private readonly downDeb = new Debounce(ABS_RULES.edgeFrames);
   private readonly backDeb = new Debounce(ABS_RULES.holdFrames);
@@ -231,6 +264,13 @@ export class AbsCounter implements Counter<AbsFrame> {
     this.smooth = this.smooth == null ? sd.torso : this.smooth + R.emaAlpha * (sd.torso - this.smooth);
     const a = this.smooth;
 
+    // ----- legs: both knees must stay bent during the rep -----
+    const k = straightestKnee(f);
+    if (k != null) {
+      this.legFrames += 1;
+      if (k > R.straightKnee) this.straightFrames += 1;
+    }
+
     // ----- stay in place -----
     if (this.refHip == null || this.refLen == null) {
       if (a > R.startMaxTorso) return { counted: false, hint: null }; // wait until lying
@@ -249,12 +289,28 @@ export class AbsCounter implements Counter<AbsFrame> {
       } else {
         this.armed = false;
         this.atTop = false;
+        this.pending = null; // e.g. got up and walked to the phone
         this.endAttempt();
         return { counted: false, hint: 'place' };
       }
     } else {
       this.outSince = null;
     }
+
+    // ----- confirm the last rep: back down → counts; got up from the floor → cancelled -----
+    let confirmed = false;
+    if (this.pending) {
+      const pd = this.pending;
+      if (Math.hypot(sd.hip.x - pd.hip.x, sd.hip.y - pd.hip.y) > R.getUpShift * pd.len) {
+        this.pending = null; // sat up only to stand up (e.g. to take the phone)
+      } else if (a < R.releaseAngle || t - pd.t >= R.confirmMs) {
+        this.reps += 1;
+        this.log.push(pd.rec);
+        this.pending = null;
+        confirmed = true;
+      }
+    }
+    const out = (hint: string | null): RepUpdate => ({ counted: confirmed, hint });
 
     // ----- rest level: how this athlete lies between reps -----
     if (this.rest == null) this.rest = a;
@@ -275,13 +331,19 @@ export class AbsCounter implements Counter<AbsFrame> {
         }
       } else {
         this.lowerSince = null;
-        if (nearRest) this.rest += R.restAlpha * (a - this.rest);
+        // follows small changes; while clearly lying it may also slowly move UP (otherwise one
+        // flat moment would pin it low forever and ordinary lying would look like an attempt)
+        if (nearRest || this.downDeb.active) this.rest += R.restAlpha * (a - this.rest);
       }
     }
     const rest = this.rest;
 
     // ----- bottom: lying down (shoulder blades near the floor) -----
-    const lying = a <= Math.max(R.downAngle, rest + R.downAboveRest);
+    // judged on the smoothed OR the raw angle: on a slow phone a quick lie-down without a
+    // pause shows only 1–2 low frames, and smoothing alone would hide them. The raw angle
+    // only counts when the smoothed one is close too (a glitch at the top can't "lie down").
+    const lowLine = Math.max(R.downAngle, rest + R.downAboveRest);
+    const lying = a <= lowLine || (sd.torso <= lowLine && a <= lowLine + 15);
     const lyingStable = this.downDeb.feed(lying);
     if (lyingStable) {
       this.armed = true;
@@ -313,15 +375,19 @@ export class AbsCounter implements Counter<AbsFrame> {
       this.lastTopAt = t;
       const start = this.attemptStart ?? this.lastBottomAt ?? t;
       const maxTorso = Math.round(this.maxTorso);
+      const straightLeg = this.legFrames >= 3 && this.straightFrames / this.legFrames >= R.straightShare;
+      this.legFrames = 0;
+      this.straightFrames = 0;
       this.endAttempt();
-      if (!this.armed) return { counted: false, hint: 'down' }; // didn't lie down before this one
+      if (!this.armed) return out('down'); // didn't lie down before this one
       this.armed = false;
       const duration = t - start;
       this.lastCountAt = t;
-      if (duration < R.minRepMs || cycle < R.minCycleMs) return { counted: false, hint: 'fast' };
-      this.reps += 1;
-      this.log.push({ tMs: t, durationMs: Math.round(duration), maxTorso: Math.max(maxTorso, Math.round(a)), rest: Math.round(rest) });
-      return { counted: true, hint: null };
+      if (straightLeg) return out('knees');
+      if (duration < R.minRepMs || cycle < R.minCycleMs) return out('fast');
+      const rec = { tMs: t, durationMs: Math.round(duration), maxTorso: Math.max(maxTorso, Math.round(a)), rest: Math.round(rest) };
+      this.pending = { t, hip: sd.hip, len: sd.torsoLen, rec };
+      return out(null);
     }
     if (a < R.upAngle) this.upDeb.feed(false);
     if (this.atTop && !this.released && !lying && this.backDeb.feed(a < R.releaseAngle)) {
@@ -334,10 +400,10 @@ export class AbsCounter implements Counter<AbsFrame> {
       const real = this.maxTorso - rest >= R.higherHintMin;
       this.endAttempt();
       this.lastCountAt = t;
-      return { counted: false, hint: real ? 'higher' : null };
+      return out(real ? 'higher' : null);
     }
 
-    return { counted: false, hint: null };
+    return out(null);
   }
 }
 
